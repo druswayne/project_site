@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <h3 class="card-title">Профиль</h3>
+                    <p><strong>Логин:</strong> {{ current_user.username }}</p>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    <p><strong>Дата регистрации:</strong> {{ current_user.created_at.strftime('%Y-%m-%d') }}</p>
+                    <p><strong>Последний вход:</strong> {{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else 'Нет' }}</p>
+                    
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin_panel') }}" class="btn btn-primary mt-3">Панель администратора</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <h3 class="card-title">Доступные уроки</h3>
+                    <div class="list-group">
+                        <!-- Здесь будут отображаться доступные уроки -->
+                        <div class="list-group-item">
+                            <h5 class="mb-1">Урок 1: Введение в Python</h5>
+                            <p class="mb-1">Базовые понятия и синтаксис языка Python</p>
+                            <small class="text-success">Доступен</small>
+                        </div>
+                        <div class="list-group-item">
+                            <h5 class="mb-1">Урок 2: Переменные и типы данных</h5>
+                            <p class="mb-1">Работа с переменными и основными типами данных</p>
+                            <small class="text-success">Доступен</small>
+                        </div>
+                        <div class="list-group-item">
+                            <h5 class="mb-1">Урок 3: Условные операторы</h5>
+                            <p class="mb-1">Использование if, elif, else</p>
+                            <small class="text-muted">Заблокирован</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow">
+                <div class="card-body">
+                    <h3 class="card-title">Прогресс обучения</h3>
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+                    </div>
+                    <p>Выполнено: 2 из 8 уроков</p>
+                    <p>Решено задач: 15 из 40</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

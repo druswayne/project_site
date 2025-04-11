@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Панель администратора{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Панель администратора</h1>
+    
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-info">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="row">
+        <!-- Управление пользователями -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">Управление пользователями</h2>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('user_list') }}" class="btn btn-primary">Список пользователей</a>
+                        <a href="{{ url_for('add_user') }}" class="btn btn-success">Добавить пользователя</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Редактор уроков -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">Редактор уроков</h2>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="#" class="btn btn-primary">Список уроков</a>
+                        <a href="#" class="btn btn-success">Создать урок</a>
+                        <a href="#" class="btn btn-warning">Управление задачами</a>
+                        <a href="#" class="btn btn-info">Настройки курса</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
