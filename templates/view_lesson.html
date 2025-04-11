@@ -32,6 +32,18 @@
     .toggle-theory:hover {
         text-decoration: underline;
     }
+    .description-edit {
+        display: none;
+    }
+    .description-edit.active {
+        display: block;
+    }
+    .description-view {
+        cursor: pointer;
+    }
+    .description-view:hover {
+        background-color: #f8f9fa;
+    }
 </style>
 
 <div class="container mt-4">
@@ -65,6 +77,31 @@
                                     {% else %}
                                         <span class="badge bg-danger">Неактивен</span>
                                     {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Описание:</th>
+                                <td>
+                                    <div class="description-view" onclick="toggleDescriptionEdit(this)">
+                                        {% if lesson.description %}
+                                            {{ lesson.description }}
+                                        {% else %}
+                                            <span class="text-muted">Описание не добавлено</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="description-edit">
+                                        <form method="POST" action="{{ url_for('update_lesson_description', lesson_id=lesson.id) }}">
+                                            <div class="input-group">
+                                                <textarea class="form-control" name="description" rows="3">{{ lesson.description or '' }}</textarea>
+                                                <button type="submit" class="btn btn-success">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-secondary" onclick="cancelDescriptionEdit(this)">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         </table>
@@ -183,6 +220,23 @@
             icon.className = 'bi bi-chevron-up';
             element.innerHTML = '<i class="bi bi-chevron-up"></i> Скрыть';
         }
+    }
+
+    function toggleDescriptionEdit(element) {
+        const view = element;
+        const edit = element.nextElementSibling;
+        
+        view.style.display = 'none';
+        edit.classList.add('active');
+    }
+
+    function cancelDescriptionEdit(button) {
+        const form = button.closest('form');
+        const edit = form.closest('.description-edit');
+        const view = edit.previousElementSibling;
+        
+        edit.classList.remove('active');
+        view.style.display = 'block';
     }
 </script>
 {% endblock %} 

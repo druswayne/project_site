@@ -350,21 +350,35 @@ def edit_lesson(lesson_id):
     lesson = Lesson.query.get_or_404(lesson_id)
     
     if request.method == 'POST':
-        order_number = request.form.get('order_number')
-        title = request.form.get('title')
-        
-        # Проверка существования урока с таким номером
-        existing_lesson = Lesson.query.filter_by(order_number=order_number).first()
-        if existing_lesson and existing_lesson.id != lesson.id:
-            flash('Урок с таким номером уже существует', 'danger')
+        try:
+            # Получаем данные из формы
+            order_number = request.form.get('order_number')
+            title = request.form.get('title')
+            description = request.form.get('description', '').strip()
+            is_active = request.form.get('is_active') == 'on'
+            
+            # Проверка существования урока с таким номером
+            existing_lesson = Lesson.query.filter_by(order_number=order_number).first()
+            if existing_lesson and existing_lesson.id != lesson.id:
+                flash('Урок с таким номером уже существует', 'danger')
+                return redirect(url_for('edit_lesson', lesson_id=lesson.id))
+            
+            # Обновляем данные урока
+            lesson.order_number = order_number
+            lesson.title = title
+            lesson.description = description if description else None
+            lesson.is_active = is_active
+            
+            # Сохраняем изменения в базе данных
+            db.session.commit()
+            
+            flash('Урок успешно обновлен', 'success')
+            return redirect(url_for('view_lesson', lesson_id=lesson.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Произошла ошибка при обновлении урока: {str(e)}', 'danger')
             return redirect(url_for('edit_lesson', lesson_id=lesson.id))
-        
-        lesson.order_number = order_number
-        lesson.title = title
-        db.session.commit()
-        
-        flash('Урок успешно обновлен', 'success')
-        return redirect(url_for('lesson_list'))
     
     return render_template('edit_lesson.html', lesson=lesson)
 
@@ -547,12 +561,25 @@ def edit_practice_tasks(lesson_id):
     
     return render_template('edit_practice_tasks.html', lesson=lesson)
 
+@app.route('/admin/lessons/<int:lesson_id>/description', methods=['POST'])
+@login_required
+def update_lesson_description(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    description = request.form.get('description', '').strip()
+    
+    lesson.description = description if description else None
+    db.session.commit()
+    
+    flash('Описание урока успешно обновлено', 'success')
+    return redirect(url_for('view_lesson', lesson_id=lesson.id))
+
 if __name__ == '__main__':
     with app.app_context():
-        # Удаляем все таблицы
-        db.drop_all()
-        # Создаем все таблицы заново
+        # Создаем таблицы, если они не существуют
         db.create_all()
-        # Создаем супер-админа
+        # Создаем супер-админа, если его нет
         create_superadmin()
     app.run(debug=True) 
