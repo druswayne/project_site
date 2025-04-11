@@ -41,6 +41,7 @@ class Lesson(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_number = db.Column(db.Integer, unique=True, nullable=False)
     title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=db.func.now())
     
@@ -317,6 +318,7 @@ def create_lesson():
     if request.method == 'POST':
         order_number = request.form.get('order_number')
         title = request.form.get('title')
+        description = request.form.get('description')
         
         # Проверка существования урока с таким номером
         if Lesson.query.filter_by(order_number=order_number).first():
@@ -327,6 +329,7 @@ def create_lesson():
         new_lesson = Lesson(
             order_number=order_number,
             title=title,
+            description=description,
             is_active=True
         )
         

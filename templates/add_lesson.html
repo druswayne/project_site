@@ -14,8 +14,8 @@
                     <form method="POST">
                         <div class="mb-3">
                             <label for="order_number" class="form-label">Номер урока</label>
-                            <input type="number" class="form-control" id="order_number" name="order_number" min="1" required>
-                            <div class="form-text">Порядковый номер урока в последовательности</div>
+                            <input type="number" class="form-control" id="order_number" name="order_number" required>
+                            <div class="form-text">Уникальный номер урока в последовательности</div>
                         </div>
                         
                         <div class="mb-3">
@@ -24,18 +24,13 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="description" class="form-label">Краткое описание урока</label>
+                            <label for="description" class="form-label">Краткое описание</label>
                             <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                            <div class="form-text">Краткое описание урока, которое будет отображаться в списке уроков</div>
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Создать урок
-                            </button>
-                            <a href="{{ url_for('lesson_list') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Назад
-                            </a>
+                            <button type="submit" class="btn btn-primary">Создать урок</button>
+                            <a href="{{ url_for('lesson_list') }}" class="btn btn-outline-secondary">Отмена</a>
                         </div>
                     </form>
                 </div>
