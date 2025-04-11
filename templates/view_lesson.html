@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lesson.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ lesson.title }}</h4>
+                    <div>
+                        <a href="{{ url_for('edit_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Редактировать
+                        </a>
+                        <a href="{{ url_for('lesson_list') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Назад
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Информация об уроке</h5>
+                        <table class="table">
+                            <tr>
+                                <th>Номер урока:</th>
+                                <td>{{ lesson.order_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Статус:</th>
+                                <td>
+                                    {% if lesson.is_active %}
+                                        <span class="badge bg-success">Активен</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Неактивен</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Теоретический материал -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Теоретический материал</h5>
+                            <div>
+                                <a href="{{ url_for('add_theory', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
+                                    <i class="bi bi-plus-circle"></i> Добавить материал
+                                </a>
+                                <a href="{{ url_for('edit_theory', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-pencil"></i> Редактировать
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                {% if lesson.theory_content %}
+                                    {{ lesson.theory_content|safe }}
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        Теоретический материал еще не добавлен
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Тест по теории -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Тест по теории</h5>
+                            <div>
+                                <a href="{{ url_for('add_theory_test', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
+                                    <i class="bi bi-plus-circle"></i> Добавить тест
+                                </a>
+                                <a href="{{ url_for('edit_theory_test', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-pencil"></i> Редактировать
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                {% if lesson.theory_test %}
+                                    <p>Тест содержит {{ lesson.theory_test.questions|length }} вопросов</p>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        Тест по теории еще не создан
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Практические задачи -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Практические задачи</h5>
+                            <div>
+                                <a href="{{ url_for('add_practice_task', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
+                                    <i class="bi bi-plus-circle"></i> Добавить задачу
+                                </a>
+                                <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-pencil"></i> Редактировать
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                {% if lesson.practice_tasks %}
+                                    <p>Добавлено {{ lesson.practice_tasks|length }} задач</p>
+                                {% else %}
+                                    <div class="alert alert-info">
+                                        Практические задачи еще не добавлены
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

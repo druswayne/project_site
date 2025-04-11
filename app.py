@@ -37,6 +37,43 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+class Lesson(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.Integer, unique=True, nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    
+    # Теоретический материал
+    theory_content = db.Column(db.Text)
+    
+    # Тест по теории
+    theory_test = db.relationship('TheoryTest', backref='lesson', uselist=False)
+    
+    # Практические задачи
+    practice_tasks = db.relationship('PracticeTask', backref='lesson', lazy=True)
+
+class TheoryTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=False)
+    questions = db.relationship('TestQuestion', backref='test', lazy=True)
+
+class TestQuestion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    test_id = db.Column(db.Integer, db.ForeignKey('theory_test.id'), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    correct_answer = db.Column(db.String(200), nullable=False)
+    options = db.Column(db.JSON)  # Список вариантов ответов
+
+class PracticeTask(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    initial_code = db.Column(db.Text)
+    test_cases = db.Column(db.JSON)  # Список тестовых случаев
+    solution = db.Column(db.Text)  # Пример решения
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -262,6 +299,250 @@ def add_user():
     # Генерация начального пароля
     initial_password = generate_secure_password()
     return render_template('add_user.html', initial_password=initial_password)
+
+@app.route('/admin/lessons')
+@login_required
+def lesson_list():
+    if not current_user.is_admin:
+        abort(403)
+    lessons = Lesson.query.order_by(Lesson.order_number).all()
+    return render_template('lesson_list.html', lessons=lessons)
+
+@app.route('/admin/lessons/create', methods=['GET', 'POST'])
+@login_required
+def create_lesson():
+    if not current_user.is_admin:
+        abort(403)
+    
+    if request.method == 'POST':
+        order_number = request.form.get('order_number')
+        title = request.form.get('title')
+        
+        # Проверка существования урока с таким номером
+        if Lesson.query.filter_by(order_number=order_number).first():
+            flash('Урок с таким номером уже существует', 'danger')
+            return redirect(url_for('create_lesson'))
+        
+        # Создание нового урока
+        new_lesson = Lesson(
+            order_number=order_number,
+            title=title,
+            is_active=True
+        )
+        
+        db.session.add(new_lesson)
+        db.session.commit()
+        
+        flash(f'Урок "{title}" успешно создан', 'success')
+        return redirect(url_for('lesson_list'))
+        
+    return render_template('create_lesson.html')
+
+@app.route('/admin/lessons/<int:lesson_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_lesson(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    
+    if request.method == 'POST':
+        order_number = request.form.get('order_number')
+        title = request.form.get('title')
+        
+        # Проверка существования урока с таким номером
+        existing_lesson = Lesson.query.filter_by(order_number=order_number).first()
+        if existing_lesson and existing_lesson.id != lesson.id:
+            flash('Урок с таким номером уже существует', 'danger')
+            return redirect(url_for('edit_lesson', lesson_id=lesson.id))
+        
+        lesson.order_number = order_number
+        lesson.title = title
+        db.session.commit()
+        
+        flash('Урок успешно обновлен', 'success')
+        return redirect(url_for('lesson_list'))
+    
+    return render_template('edit_lesson.html', lesson=lesson)
+
+@app.route('/admin/lessons/<int:lesson_id>/toggle', methods=['POST'])
+@login_required
+def toggle_lesson_status(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    lesson.is_active = not lesson.is_active
+    db.session.commit()
+    
+    flash(f'Урок {"активирован" if lesson.is_active else "деактивирован"}', 'success')
+    return redirect(url_for('lesson_list'))
+
+@app.route('/admin/lessons/<int:lesson_id>/delete', methods=['POST'])
+@login_required
+def delete_lesson(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    db.session.delete(lesson)
+    db.session.commit()
+    
+    flash('Урок успешно удален', 'success')
+    return redirect(url_for('lesson_list'))
+
+@app.route('/admin/lessons/<int:lesson_id>')
+@login_required
+def view_lesson(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    return render_template('view_lesson.html', lesson=lesson)
+
+@app.route('/admin/lessons/<int:lesson_id>/theory/add', methods=['GET', 'POST'])
+@login_required
+def add_theory(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    
+    if request.method == 'POST':
+        content = request.form.get('content')
+        lesson.theory_content = content
+        db.session.commit()
+        flash('Теоретический материал успешно добавлен', 'success')
+        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+    
+    return render_template('add_theory.html', lesson=lesson)
+
+@app.route('/admin/lessons/<int:lesson_id>/theory/edit', methods=['GET', 'POST'])
+@login_required
+def edit_theory(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    
+    if request.method == 'POST':
+        content = request.form.get('content')
+        lesson.theory_content = content
+        db.session.commit()
+        flash('Теоретический материал успешно обновлен', 'success')
+        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+    
+    return render_template('edit_theory.html', lesson=lesson)
+
+@app.route('/admin/lessons/<int:lesson_id>/test/add', methods=['GET', 'POST'])
+@login_required
+def add_theory_test(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    
+    if request.method == 'POST':
+        questions = request.form.getlist('questions[]')
+        answers = request.form.getlist('answers[]')
+        options = request.form.getlist('options[]')
+        
+        test = TheoryTest(lesson_id=lesson.id)
+        db.session.add(test)
+        db.session.commit()
+        
+        for i in range(len(questions)):
+            question = TestQuestion(
+                test_id=test.id,
+                question_text=questions[i],
+                correct_answer=answers[i],
+                options=options[i].split(',')
+            )
+            db.session.add(question)
+        
+        db.session.commit()
+        flash('Тест успешно создан', 'success')
+        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+    
+    return render_template('add_theory_test.html', lesson=lesson)
+
+@app.route('/admin/lessons/<int:lesson_id>/test/edit', methods=['GET', 'POST'])
+@login_required
+def edit_theory_test(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    test = lesson.theory_test
+    
+    if request.method == 'POST':
+        questions = request.form.getlist('questions[]')
+        answers = request.form.getlist('answers[]')
+        options = request.form.getlist('options[]')
+        
+        # Удаляем старые вопросы
+        TestQuestion.query.filter_by(test_id=test.id).delete()
+        
+        # Добавляем новые вопросы
+        for i in range(len(questions)):
+            question = TestQuestion(
+                test_id=test.id,
+                question_text=questions[i],
+                correct_answer=answers[i],
+                options=options[i].split(',')
+            )
+            db.session.add(question)
+        
+        db.session.commit()
+        flash('Тест успешно обновлен', 'success')
+        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+    
+    return render_template('edit_theory_test.html', lesson=lesson, test=test)
+
+@app.route('/admin/lessons/<int:lesson_id>/tasks/add', methods=['GET', 'POST'])
+@login_required
+def add_practice_task(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        initial_code = request.form.get('initial_code')
+        test_cases = request.form.get('test_cases')
+        solution = request.form.get('solution')
+        
+        task = PracticeTask(
+            lesson_id=lesson.id,
+            title=title,
+            description=description,
+            initial_code=initial_code,
+            test_cases=test_cases,
+            solution=solution
+        )
+        
+        db.session.add(task)
+        db.session.commit()
+        flash('Практическая задача успешно добавлена', 'success')
+        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+    
+    return render_template('add_practice_task.html', lesson=lesson)
+
+@app.route('/admin/lessons/<int:lesson_id>/tasks/edit', methods=['GET', 'POST'])
+@login_required
+def edit_practice_tasks(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    
+    if request.method == 'POST':
+        # Обработка обновления задач
+        pass
+    
+    return render_template('edit_practice_tasks.html', lesson=lesson)
 
 if __name__ == '__main__':
     with app.app_context():
