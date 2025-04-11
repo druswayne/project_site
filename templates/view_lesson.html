@@ -3,6 +3,37 @@
 {% block title %}{{ lesson.title }}{% endblock %}
 
 {% block content %}
+<style>
+    .theory-preview {
+        max-height: 200px;
+        overflow: hidden;
+        position: relative;
+    }
+    .theory-preview::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50px;
+        background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+    }
+    .theory-content {
+        display: none;
+    }
+    .theory-content.expanded {
+        display: block;
+    }
+    .toggle-theory {
+        cursor: pointer;
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    .toggle-theory:hover {
+        text-decoration: underline;
+    }
+</style>
+
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-8 offset-md-2">
@@ -55,7 +86,17 @@
                         <div class="card">
                             <div class="card-body">
                                 {% if lesson.theory_content %}
-                                    {{ lesson.theory_content|safe }}
+                                    <div class="theory-preview">
+                                        {{ lesson.theory_content|safe }}
+                                    </div>
+                                    <div class="theory-content">
+                                        {{ lesson.theory_content|safe }}
+                                    </div>
+                                    <div class="text-center mt-2">
+                                        <a class="toggle-theory" onclick="toggleTheory(this)">
+                                            <i class="bi bi-chevron-down"></i> Показать полностью
+                                        </a>
+                                    </div>
                                 {% else %}
                                     <div class="alert alert-info">
                                         Теоретический материал еще не добавлен
@@ -121,4 +162,24 @@
         </div>
     </div>
 </div>
+
+<script>
+    function toggleTheory(element) {
+        const preview = element.closest('.card-body').querySelector('.theory-preview');
+        const content = element.closest('.card-body').querySelector('.theory-content');
+        const icon = element.querySelector('i');
+        
+        if (content.classList.contains('expanded')) {
+            content.classList.remove('expanded');
+            preview.style.display = 'block';
+            icon.className = 'bi bi-chevron-down';
+            element.innerHTML = '<i class="bi bi-chevron-down"></i> Показать полностью';
+        } else {
+            content.classList.add('expanded');
+            preview.style.display = 'none';
+            icon.className = 'bi bi-chevron-up';
+            element.innerHTML = '<i class="bi bi-chevron-up"></i> Скрыть';
+        }
+    }
+</script>
 {% endblock %} 
