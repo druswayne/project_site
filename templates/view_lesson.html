@@ -75,12 +75,15 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5>Теоретический материал</h5>
                             <div>
-                                <a href="{{ url_for('add_theory', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
-                                    <i class="bi bi-plus-circle"></i> Добавить материал
-                                </a>
-                                <a href="{{ url_for('edit_theory', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-pencil"></i> Редактировать
-                                </a>
+                                {% if not lesson.theory_content %}
+                                    <a href="{{ url_for('add_theory', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
+                                        <i class="bi bi-plus-circle"></i> Добавить материал
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('edit_theory', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-pencil"></i> Редактировать
+                                    </a>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="card">
