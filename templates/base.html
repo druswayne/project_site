@@ -178,6 +178,9 @@
             background-color: var(--cyber-card-bg);
             border: 1px solid var(--cyber-primary);
             color: var(--cyber-text-light);
+            border-radius: 0;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
         }
         
         .form-control:focus {
@@ -188,6 +191,48 @@
         }
         
         .form-label {
+            color: var(--cyber-text-light);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-text {
+            color: var(--cyber-text-light);
+            opacity: 0.7;
+        }
+        
+        .form-select {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            color: var(--cyber-text-light);
+            border-radius: 0;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-select:focus {
+            background-color: var(--cyber-card-bg);
+            border-color: var(--cyber-primary);
+            color: var(--cyber-text-light);
+            box-shadow: 0 0 10px var(--cyber-primary);
+        }
+        
+        .form-check-input {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            border-radius: 0;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--cyber-primary);
+            border-color: var(--cyber-primary);
+        }
+        
+        .form-check-input:focus {
+            box-shadow: 0 0 5px var(--cyber-primary);
+        }
+        
+        .form-check-label {
             color: var(--cyber-text-light);
         }
         
@@ -277,30 +322,38 @@
         /* Стили для кнопок */
         .btn-primary {
             background-color: var(--cyber-primary);
-            border-color: var(--cyber-primary);
+            border: none;
             color: var(--cyber-dark);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             transition: all 0.3s ease;
         }
         
         .btn-primary:hover {
-            background-color: transparent;
-            border-color: var(--cyber-primary);
-            color: var(--cyber-primary);
-            box-shadow: 0 0 20px var(--cyber-primary);
+            background-color: var(--cyber-secondary);
+            color: var(--cyber-dark);
+            box-shadow: 0 0 15px var(--cyber-secondary);
         }
         
         .btn-secondary {
-            background-color: var(--cyber-secondary);
-            border-color: var(--cyber-secondary);
-            color: var(--cyber-dark);
+            background-color: transparent;
+            border: 1px solid var(--cyber-primary);
+            color: var(--cyber-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             transition: all 0.3s ease;
         }
         
         .btn-secondary:hover {
-            background-color: transparent;
-            border-color: var(--cyber-secondary);
-            color: var(--cyber-secondary);
-            box-shadow: 0 0 20px var(--cyber-secondary);
+            background-color: var(--cyber-primary);
+            color: var(--cyber-dark);
+            box-shadow: 0 0 15px var(--cyber-primary);
         }
         
         .btn-success {
@@ -402,6 +455,193 @@
             border-bottom: 1px solid var(--cyber-primary);
             color: var(--cyber-dark) !important;
         }
+        
+        /* Стили для модальных окон */
+        .modal-content {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            border-radius: 0;
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid var(--cyber-primary);
+        }
+        
+        .modal-footer {
+            border-top: 1px solid var(--cyber-primary);
+        }
+        
+        .modal-title {
+            color: var(--cyber-text-light);
+        }
+        
+        /* Стили для карточек в формах */
+        .card {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            border-radius: 0;
+        }
+        
+        .card-header {
+            background-color: var(--cyber-card-bg);
+            border-bottom: 1px solid var(--cyber-primary);
+            color: var(--cyber-text-light);
+        }
+        
+        .card-body {
+            color: var(--cyber-text-light);
+        }
+        
+        /* Стили для таблиц в формах */
+        .table {
+            color: var(--cyber-text-light);
+        }
+        
+        .table thead th {
+            border-bottom: 2px solid var(--cyber-primary);
+            color: var(--cyber-text-light);
+        }
+        
+        .table td, .table th {
+            border-top: 1px solid var(--cyber-primary);
+        }
+        
+        /* Стили для алертов */
+        .alert {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            color: var(--cyber-text-light);
+            border-radius: 0;
+        }
+        
+        .alert-danger {
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+        
+        .alert-success {
+            border-color: var(--cyber-primary);
+            color: var(--cyber-primary);
+        }
+        
+        .alert-warning {
+            border-color: #ffbb33;
+            color: #ffbb33;
+        }
+        
+        .alert-info {
+            border-color: #33b5e5;
+            color: #33b5e5;
+        }
+        
+        /* Стили для аккордеона */
+        .accordion {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            border-radius: 0;
+        }
+        
+        .accordion-item {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            border-radius: 0;
+            margin-bottom: 0.5rem;
+        }
+        
+        .accordion-button {
+            background-color: var(--cyber-card-bg);
+            color: var(--cyber-text-light);
+            border: none;
+            border-radius: 0;
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .accordion-button:not(.collapsed) {
+            background-color: rgba(0, 255, 157, 0.1);
+            color: var(--cyber-primary);
+            box-shadow: 0 0 10px var(--cyber-primary);
+        }
+        
+        .accordion-button:focus {
+            box-shadow: 0 0 10px var(--cyber-primary);
+            border-color: var(--cyber-primary);
+        }
+        
+        .accordion-button::after {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2300ff9d'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+        }
+        
+        .accordion-button:not(.collapsed)::after {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2300ff9d'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+        }
+        
+        .accordion-body {
+            background-color: var(--cyber-card-bg);
+            color: var(--cyber-text-light);
+            border-top: 1px solid var(--cyber-primary);
+            padding: 1rem 1.25rem;
+        }
+        
+        .accordion-body p {
+            color: var(--cyber-text-light);
+            margin-bottom: 0.5rem;
+        }
+        
+        .accordion-body .text-muted {
+            color: var(--cyber-text-muted);
+        }
+        
+        /* Стили для бейджей */
+        .badge {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 0.5em 0.75em;
+            border-radius: 0;
+        }
+        
+        .badge.bg-primary {
+            background-color: var(--cyber-primary) !important;
+            color: var(--cyber-dark) !important;
+            border: 1px solid var(--cyber-primary);
+            box-shadow: 0 0 5px var(--cyber-primary);
+        }
+        
+        .badge.bg-secondary {
+            background-color: transparent !important;
+            color: var(--cyber-primary) !important;
+            border: 1px solid var(--cyber-primary);
+        }
+        
+        .badge.bg-success {
+            background-color: var(--cyber-primary) !important;
+            color: var(--cyber-dark) !important;
+            border: 1px solid var(--cyber-primary);
+            box-shadow: 0 0 5px var(--cyber-primary);
+        }
+        
+        .badge.bg-danger {
+            background-color: #ff4444 !important;
+            color: var(--cyber-dark) !important;
+            border: 1px solid #ff4444;
+            box-shadow: 0 0 5px #ff4444;
+        }
+        
+        .badge.bg-warning {
+            background-color: #ffbb33 !important;
+            color: var(--cyber-dark) !important;
+            border: 1px solid #ffbb33;
+            box-shadow: 0 0 5px #ffbb33;
+        }
+        
+        .badge.bg-info {
+            background-color: #33b5e5 !important;
+            color: var(--cyber-dark) !important;
+            border: 1px solid #33b5e5;
+            box-shadow: 0 0 5px #33b5e5;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -476,7 +716,7 @@
     {% block content %}{% endblock %}
 
     <!-- Подвал -->
-    <footer class="footer">
+    <footer class="footer mt-5">
         <div class="container">
             <div class="row">
                 <div class="col-md-4">
