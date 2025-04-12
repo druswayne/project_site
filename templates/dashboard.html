@@ -4,58 +4,80 @@
 
 {% block content %}
 <div class="container mt-4">
+    <h1 class="mb-4">Личный кабинет</h1>
+    
     <div class="row">
-        <div class="col-md-4">
-            <div class="card shadow mb-4">
-                <div class="card-body">
-                    <h3 class="card-title">Профиль</h3>
-                    <p><strong>Логин:</strong> {{ current_user.username }}</p>
-                    <p><strong>Email:</strong> {{ current_user.email }}</p>
-                    <p><strong>Дата регистрации:</strong> {{ current_user.created_at.strftime('%Y-%m-%d') }}</p>
-                    <p><strong>Последний вход:</strong> {{ current_user.last_login.strftime('%Y-%m-%d %H:%M') if current_user.last_login else 'Нет' }}</p>
-                    
-                    {% if current_user.is_admin %}
-                        <a href="{{ url_for('admin_panel') }}" class="btn btn-primary mt-3">Панель администратора</a>
-                    {% endif %}
+        <div class="col-md-8">
+            <h2 class="mb-3">Доступные уроки</h2>
+            
+            {% if lessons %}
+                <div class="list-group">
+                    {% for lesson in lessons %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ lesson.title }}</h5>
+                                    <p class="mb-1">{{ lesson.description }}</p>
+                                    <small class="text-muted">
+                                        {% if lesson.required_lesson_id %}
+                                            Требуется пройти предыдущий урок
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div>
+                                    {% if lesson.can_access %}
+                                        <a href="{{ url_for('view_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                            Пройти урок
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-secondary" disabled>
+                                            Недоступно
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
-            </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Пока нет доступных уроков. Ожидайте, пока администратор добавит новые уроки.
+                </div>
+            {% endif %}
         </div>
         
-        <div class="col-md-8">
-            <div class="card shadow mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Информация о пользователе</h5>
+                </div>
                 <div class="card-body">
-                    <h3 class="card-title">Доступные уроки</h3>
-                    <div class="list-group">
-                        <!-- Здесь будут отображаться доступные уроки -->
-                        <div class="list-group-item">
-                            <h5 class="mb-1">Урок 1: Введение в Python</h5>
-                            <p class="mb-1">Базовые понятия и синтаксис языка Python</p>
-                            <small class="text-success">Доступен</small>
-                        </div>
-                        <div class="list-group-item">
-                            <h5 class="mb-1">Урок 2: Переменные и типы данных</h5>
-                            <p class="mb-1">Работа с переменными и основными типами данных</p>
-                            <small class="text-success">Доступен</small>
-                        </div>
-                        <div class="list-group-item">
-                            <h5 class="mb-1">Урок 3: Условные операторы</h5>
-                            <p class="mb-1">Использование if, elif, else</p>
-                            <small class="text-muted">Заблокирован</small>
-                        </div>
-                    </div>
+                    <p><strong>Имя пользователя:</strong> {{ current_user.username }}</p>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    <p><strong>Роль:</strong> {{ 'Администратор' if current_user.is_admin else 'Пользователь' }}</p>
                 </div>
             </div>
             
-            <div class="card shadow">
-                <div class="card-body">
-                    <h3 class="card-title">Прогресс обучения</h3>
-                    <div class="progress mb-3">
-                        <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+            {% if current_user.is_admin %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Панель администратора</h5>
                     </div>
-                    <p>Выполнено: 2 из 8 уроков</p>
-                    <p>Решено задач: 15 из 40</p>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('user_list') }}" class="btn btn-primary">
+                                Управление пользователями
+                            </a>
+                            <a href="{{ url_for('lesson_list') }}" class="btn btn-primary">
+                                Управление уроками
+                            </a>
+                            <a href="{{ url_for('admin_panel') }}" class="btn btn-primary">
+                                Общая статистика
+                            </a>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>

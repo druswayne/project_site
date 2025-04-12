@@ -63,6 +63,12 @@ class Lesson(db.Model):
     
     # Практические задачи
     practice_tasks = db.relationship('PracticeTask', backref='lesson', lazy=True)
+    
+    # ID предыдущего урока, который нужно пройти
+    required_lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=True)
+    
+    # Связь с предыдущим уроком
+    required_lesson = db.relationship('Lesson', remote_side=[id], backref='next_lessons')
 
 class TheoryTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -118,11 +124,14 @@ class TestResult(db.Model):
 class TaskTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     task_id = db.Column(db.Integer, db.ForeignKey('practice_task.id'), nullable=False)
-    function = db.Column(db.String(200), nullable=False)  # Название функции с аргументами
+    function = db.Column(db.String(200), nullable=False)  # Название функции для теста
     input_data = db.Column(db.Text, nullable=False)  # Аргументы функции
     expected_output = db.Column(db.Text, nullable=False)
     is_hidden = db.Column(db.Boolean, default=False)
     order_number = db.Column(db.Integer, nullable=False)
+
+    def __repr__(self):
+        return f'<TaskTest {self.id}>'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -210,7 +219,30 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    # Получаем все уроки
+    lessons = Lesson.query.order_by(Lesson.order_number).all()
+    
+    # Для каждого урока проверяем, может ли пользователь его пройти
+    for lesson in lessons:
+        # Проверяем, есть ли у пользователя доступ к уроку
+        lesson.can_access = True  # По умолчанию доступ разрешен
+        
+        # Если урок требует прохождения предыдущего урока
+        if lesson.required_lesson_id:
+            # Проверяем, прошел ли пользователь предыдущий урок
+            required_lesson = Lesson.query.get(lesson.required_lesson_id)
+            if required_lesson:
+                # Проверяем, есть ли у пользователя прогресс по предыдущему уроку
+                lesson_progress = UserLessonProgress.query.filter_by(
+                    user_id=current_user.id,
+                    lesson_id=required_lesson.id
+                ).first()
+                
+                # Если нет прогресса или урок не пройден, запрещаем доступ
+                if not lesson_progress or not lesson_progress.is_completed:
+                    lesson.can_access = False
+    
+    return render_template('dashboard.html', lessons=lessons)
 
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""
@@ -825,7 +857,7 @@ def add_task_test():
     
     test = TaskTest(
         task_id=task_id,
-        function=input_data,
+        function=task.function_name,  # Используем имя функции из задачи
         input_data=input_data,
         expected_output=expected_output,
         is_hidden=is_hidden,
@@ -900,7 +932,7 @@ def upload_task_tests():
         for test_data in tests:
             test = TaskTest(
                 task_id=task_id,
-                function=test_data['function'],
+                function=task.function_name,  # Используем имя функции из задачи
                 input_data=test_data['input_data'],
                 expected_output=test_data['expected_output'],
                 is_hidden=test_data['is_hidden'],
@@ -937,11 +969,13 @@ def parse_test_file(content):
             line = line.strip('()')
             function_part, expected_output = line.split(',', 1)
             
-            # Извлекаем аргументы
+            # Извлекаем имя функции и аргументы
+            function_name = function_part[:function_part.find('(')].strip()
             args = function_part[function_part.find('(')+1:function_part.rfind(')')].strip()
             
             test = {
                 'order_number': order_number,
+                'function': function_name,
                 'input_data': args,
                 'expected_output': expected_output.strip(),
                 'is_hidden': is_hidden
