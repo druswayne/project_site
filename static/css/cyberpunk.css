@@ -1,4 +1,5 @@
-:root {
+/* Основные переменные для киберпанк темы */
+:root[data-theme="cyberpunk"] {
     --cyber-primary: #00cc7a;
     --cyber-secondary: #ff6600;
     --cyber-dark: #1a1a1a;
@@ -11,6 +12,25 @@
     --cyber-info: #ff00ff;
 }
 
+/* Переменные для нейтральной темы */
+:root[data-theme="neutral"] {
+    --cyber-primary: #4a6fa5;
+    --cyber-secondary: #6c757d;
+    --cyber-dark: #f8f9fa;
+    --cyber-bg: #ffffff;
+    --cyber-text: #212529;
+    --cyber-text-light: #343a40;
+    --cyber-text-muted: #6c757d;
+    --cyber-card-bg: #f8f9fa;
+    --cyber-text-dark: #212529;
+    --cyber-info: #17a2b8;
+}
+
+/* Анимация для плавного перехода */
+:root {
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+}
+
 body {
     font-family: 'Orbitron', sans-serif;
     background-color: var(--cyber-bg);
@@ -18,11 +38,13 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    transition: background-color 0.5s ease, color 0.5s ease;
 }
 
 .navbar {
     background-color: var(--cyber-dark) !important;
     border-bottom: 2px solid var(--cyber-primary);
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .navbar-brand {
@@ -80,6 +102,7 @@ body {
 .dropdown-menu {
     background-color: var(--cyber-card-bg);
     border: 1px solid var(--cyber-primary);
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .dropdown-item {
@@ -95,6 +118,7 @@ body {
     background-color: var(--cyber-card-bg);
     border: 1px solid var(--cyber-primary);
     color: var(--cyber-text-light);
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .footer {
@@ -102,6 +126,7 @@ body {
     border-top: 2px solid var(--cyber-primary);
     color: var(--cyber-text-light);
     padding: 50px 0;
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .text-white {
@@ -130,6 +155,7 @@ p {
     background-color: var(--cyber-card-bg);
     border: 1px solid var(--cyber-primary);
     color: var(--cyber-text-light);
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .card-header {
@@ -146,6 +172,7 @@ p {
 /* Стили для таблиц */
 .table {
     color: var(--cyber-text-light);
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .table thead th {
@@ -171,6 +198,7 @@ p {
     border-radius: 0;
     padding: 0.75rem 1rem;
     transition: all 0.3s ease;
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .form-control:focus {
@@ -631,4 +659,33 @@ p {
     color: var(--cyber-dark) !important;
     border: 1px solid #33b5e5;
     box-shadow: 0 0 5px #33b5e5;
+}
+
+/* Стили для переключателя тем */
+.theme-switch {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.theme-switch .btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.theme-switch .btn-cyberpunk {
+    background-color: var(--cyber-primary);
+    border-color: var(--cyber-primary);
+}
+
+.theme-switch .btn-neutral {
+    background-color: var(--cyber-text-muted);
+    border-color: var(--cyber-text-muted);
 } 

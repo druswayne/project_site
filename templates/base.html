@@ -9,7 +9,8 @@
     <link href="{{ url_for('static', filename='css/cyberpunk.css') }}" rel="stylesheet">
     
     <style>
-        :root {
+        /* Основные переменные для киберпанк темы */
+        :root[data-theme="cyberpunk"] {
             --cyber-primary: #00cc7a;
             --cyber-secondary: #ff6600;
             --cyber-dark: #1a1a1a;
@@ -22,6 +23,48 @@
             --cyber-info: #ff00ff;
         }
         
+        /* Переменные для нейтральной темы */
+        :root[data-theme="neutral"] {
+            --cyber-primary: #4a6fa5;
+            --cyber-secondary: #6c757d;
+            --cyber-dark: #f8f9fa;
+            --cyber-bg: #ffffff;
+            --cyber-text: #212529;
+            --cyber-text-light: #343a40;
+            --cyber-text-muted: #6c757d;
+            --cyber-card-bg: #f8f9fa;
+            --cyber-text-dark: #212529;
+            --cyber-info: #17a2b8;
+        }
+
+        /* Переменные для классической темы */
+        :root[data-theme="classic"] {
+            --cyber-primary: #2c3e50;
+            --cyber-secondary: #34495e;
+            --cyber-dark: #ecf0f1;
+            --cyber-bg: #ffffff;
+            --cyber-text: #2c3e50;
+            --cyber-text-light: #34495e;
+            --cyber-text-muted: #7f8c8d;
+            --cyber-card-bg: #ecf0f1;
+            --cyber-text-dark: #2c3e50;
+            --cyber-info: #3498db;
+        }
+
+        /* Переменные для темной темы */
+        :root[data-theme="dark"] {
+            --cyber-primary: #3498db;
+            --cyber-secondary: #2980b9;
+            --cyber-dark: #1a1a1a;
+            --cyber-bg: #2c3e50;
+            --cyber-text: #ecf0f1;
+            --cyber-text-light: #ffffff;
+            --cyber-text-muted: #bdc3c7;
+            --cyber-card-bg: #34495e;
+            --cyber-text-dark: #ecf0f1;
+            --cyber-info: #3498db;
+        }
+
         body {
             font-family: 'Orbitron', sans-serif;
             background-color: var(--cyber-bg);
@@ -29,6 +72,12 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        body.theme-loaded {
+            opacity: 1;
         }
         
         .navbar {
@@ -643,10 +692,84 @@
             border: 1px solid #33b5e5;
             box-shadow: 0 0 5px #33b5e5;
         }
+
+        /* Стили для переключателя тем */
+        .theme-switch {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .theme-switch .btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--cyber-primary);
+            transition: all 0.3s ease;
+            background-color: var(--cyber-card-bg);
+            color: var(--cyber-primary);
+        }
+
+        .theme-switch .btn:hover {
+            transform: scale(1.1);
+            background-color: var(--cyber-primary);
+            color: var(--cyber-dark);
+        }
+
+        .theme-switch .dropdown-menu {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+            border-radius: 10px;
+            padding: 10px;
+            min-width: 200px;
+        }
+
+        .theme-switch .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            color: var(--cyber-text-light);
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+
+        .theme-switch .dropdown-item:hover {
+            background-color: var(--cyber-primary);
+            color: var(--cyber-dark);
+        }
+
+        .theme-switch .dropdown-item.active {
+            background-color: var(--cyber-primary);
+            color: var(--cyber-dark);
+        }
+
+        .theme-switch .theme-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        .theme-switch .theme-name {
+            flex-grow: 1;
+        }
+
+        .theme-switch .theme-check {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .theme-switch .dropdown-item.active .theme-check {
+            opacity: 1;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body data-theme="neutral">
     <!-- Навигационная панель -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
@@ -739,7 +862,74 @@
         </div>
     </footer>
 
+    <!-- Переключатель тем -->
+    <div class="theme-switch">
+        <button class="btn dropdown-toggle" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-palette"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
+            <li>
+                <a class="dropdown-item" href="#" onclick="setTheme('cyberpunk')">
+                    <span class="theme-icon"><i class="fas fa-gamepad"></i></span>
+                    <span class="theme-name">Киберпанк</span>
+                    <span class="theme-check"><i class="fas fa-check"></i></span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="#" onclick="setTheme('neutral')">
+                    <span class="theme-icon"><i class="fas fa-palette"></i></span>
+                    <span class="theme-name">Нейтральная</span>
+                    <span class="theme-check"><i class="fas fa-check"></i></span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="#" onclick="setTheme('classic')">
+                    <span class="theme-icon"><i class="fas fa-book"></i></span>
+                    <span class="theme-name">Классическая</span>
+                    <span class="theme-check"><i class="fas fa-check"></i></span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="#" onclick="setTheme('dark')">
+                    <span class="theme-icon"><i class="fas fa-moon"></i></span>
+                    <span class="theme-name">Темная</span>
+                    <span class="theme-check"><i class="fas fa-check"></i></span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
+    <script>
+        // Функция для установки темы
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            // Обновляем активный элемент в выпадающем меню
+            document.querySelectorAll('.theme-switch .dropdown-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('onclick').includes(theme)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Загрузка сохраненной темы при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'neutral';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.body.classList.add('theme-loaded');
+            
+            // Устанавливаем активный элемент в выпадающем меню
+            document.querySelectorAll('.theme-switch .dropdown-item').forEach(item => {
+                if (item.getAttribute('onclick').includes(savedTheme)) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html> 
