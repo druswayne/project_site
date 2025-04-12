@@ -316,29 +316,49 @@ def create_lesson():
         abort(403)
     
     if request.method == 'POST':
-        order_number = request.form.get('order_number')
-        title = request.form.get('title')
-        description = request.form.get('description')
-        
-        # Проверка существования урока с таким номером
-        if Lesson.query.filter_by(order_number=order_number).first():
-            flash('Урок с таким номером уже существует', 'danger')
-            return redirect(url_for('create_lesson'))
-        
-        # Создание нового урока
-        new_lesson = Lesson(
-            order_number=order_number,
-            title=title,
-            description=description,
-            is_active=True
-        )
-        
-        db.session.add(new_lesson)
-        db.session.commit()
-        
-        flash(f'Урок "{title}" успешно создан', 'success')
-        return redirect(url_for('lesson_list'))
-        
+        try:
+            order_number = request.form.get('order_number')
+            title = request.form.get('title')
+            description = request.form.get('description')
+            
+            # Проверка на пустые поля
+            if not order_number or not title:
+                flash('Пожалуйста, заполните все обязательные поля', 'danger')
+                return render_template('create_lesson.html', 
+                                    order_number=order_number,
+                                    title=title,
+                                    description=description)
+            
+            # Проверка существования урока с таким номером
+            if Lesson.query.filter_by(order_number=order_number).first():
+                flash('Урок с таким номером уже существует', 'danger')
+                return render_template('create_lesson.html', 
+                                    order_number=order_number,
+                                    title=title,
+                                    description=description)
+            
+            # Создание нового урока
+            new_lesson = Lesson(
+                order_number=order_number,
+                title=title,
+                description=description,
+                is_active=True
+            )
+            
+            db.session.add(new_lesson)
+            db.session.commit()
+            
+            flash(f'Урок "{title}" успешно создан', 'success')
+            return redirect(url_for('lesson_list'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Произошла ошибка при создании урока: {str(e)}', 'danger')
+            return render_template('create_lesson.html',
+                                order_number=order_number,
+                                title=title,
+                                description=description)
+    
     return render_template('create_lesson.html')
 
 @app.route('/admin/lessons/<int:lesson_id>/edit', methods=['GET', 'POST'])

@@ -14,18 +14,20 @@
                     <form method="POST">
                         <div class="mb-3">
                             <label for="order_number" class="form-label">Номер урока</label>
-                            <input type="number" class="form-control" id="order_number" name="order_number" min="1" required>
+                            <input type="number" class="form-control" id="order_number" name="order_number" 
+                                   value="{{ order_number or '' }}" min="1" required>
                             <div class="form-text">Порядковый номер урока в последовательности</div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="title" class="form-label">Тема урока</label>
-                            <input type="text" class="form-control" id="title" name="title" required>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ title or '' }}" required>
                         </div>
                         
                         <div class="mb-3">
                             <label for="description" class="form-label">Краткое описание урока</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ description or '' }}</textarea>
                             <div class="form-text">Краткое описание урока, которое будет отображаться в списке уроков</div>
                         </div>
                         
