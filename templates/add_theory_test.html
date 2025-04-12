@@ -35,7 +35,9 @@
         
         <div class="mb-3">
             <button type="submit" class="btn btn-primary">Создать тест</button>
-            <a href="{{ url_for('view_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">Отмена</a>
+            <a href="{{ url_for('view_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Назад
+            </a>
         </div>
     </form>
 </div>
