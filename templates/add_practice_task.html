@@ -36,21 +36,6 @@
             <label class="form-check-label" for="is_required">Обязательная задача</label>
         </div>
         
-        <div class="card mt-4">
-            <div class="card-header">
-                <h4>Тесты для задачи</h4>
-            </div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label for="test_file">Загрузить тесты из файла</label>
-                    <input type="file" class="form-control-file" id="test_file" name="file" accept=".txt">
-                    <small class="form-text text-muted">
-                        Поддерживается формат .txt. Пример формата можно скачать <a href="{{ url_for('static', filename='test_template.txt') }}" download>здесь</a>
-                    </small>
-                </div>
-            </div>
-        </div>
-        
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">Добавить задачу</button>
             <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-secondary">Назад</a>

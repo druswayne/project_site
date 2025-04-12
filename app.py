@@ -690,27 +690,8 @@ def add_practice_task(lesson_id):
                 is_required=is_required
             )
             db.session.add(task)
-            db.session.flush()  # Получаем ID задачи
-            
-            # Обрабатываем загрузку тестов из файла
-            if 'file' in request.files and request.files['file'].filename:
-                file = request.files['file']
-                if file.filename.endswith('.txt'):
-                    content = file.read().decode('utf-8')
-                    tests = parse_test_file(content)
-                    
-                    for test_data in tests:
-                        test = TaskTest(
-                            task_id=task.id,
-                            function=test_data['function'],
-                            input_data=test_data['input_data'],
-                            expected_output=test_data['expected_output'],
-                            is_hidden=test_data['is_hidden'],
-                            order_number=test_data['order_number']
-                        )
-                        db.session.add(test)
-            
             db.session.commit()
+            
             flash('Задача успешно добавлена', 'success')
             return redirect(url_for('edit_practice_tasks', lesson_id=lesson.id))
             
@@ -942,7 +923,7 @@ def parse_test_file(content):
     
     for line in content.split('\n'):
         line = line.strip()
-        if not line or line.startswith('#'):
+        if not line:
             continue
             
         # Проверяем, является ли тест скрытым
@@ -956,13 +937,11 @@ def parse_test_file(content):
             line = line.strip('()')
             function_part, expected_output = line.split(',', 1)
             
-            # Извлекаем имя функции и аргументы
-            function_name = function_part.split('(')[0].strip()
+            # Извлекаем аргументы
             args = function_part[function_part.find('(')+1:function_part.rfind(')')].strip()
             
             test = {
                 'order_number': order_number,
-                'function': function_name,
                 'input_data': args,
                 'expected_output': expected_output.strip(),
                 'is_hidden': is_hidden
