@@ -171,32 +171,21 @@
                     </div>
 
                     <!-- Практические задачи -->
-                    <div class="card shadow mb-4">
-                        <div class="card-header bg-light">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Практические задачи</h5>
-                                <div>
-                                    <a href="{{ url_for('add_practice_task', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
-                                        <i class="bi bi-plus-circle"></i> Добавить задачу
-                                    </a>
-                                    <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
-                                        <i class="bi bi-pencil"></i> Редактировать
-                                    </a>
-                                </div>
-                            </div>
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Практические задачи</h5>
+                            <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-circle"></i> Управление задачами
+                            </a>
                         </div>
                         <div class="card-body">
                             {% if lesson.practice_tasks %}
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <p class="mb-0">Добавлено {{ lesson.practice_tasks|length }} задач</p>
-                                    <a href="{{ url_for('practice_tasks', lesson_id=lesson.id) }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-play-circle"></i> Начать практику
-                                    </a>
-                                </div>
+                                <p class="mb-0">Добавлено {{ lesson.practice_tasks|length }} задач</p>
+                                <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-list"></i> Просмотреть задачи
+                                </a>
                             {% else %}
-                                <div class="alert alert-info mb-0">
-                                    Практические задачи еще не добавлены
-                                </div>
+                                <p class="text-muted mb-0">Практические задачи не добавлены</p>
                             {% endif %}
                         </div>
                     </div>

@@ -7,8 +7,18 @@ from dotenv import load_dotenv
 from datetime import datetime
 import secrets
 import string
+from functools import wraps
+import subprocess
 
 load_dotenv()
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
@@ -84,9 +94,11 @@ class PracticeTask(db.Model):
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    initial_code = db.Column(db.Text)
-    test_cases = db.Column(db.JSON)  # Список тестовых случаев
-    solution = db.Column(db.Text)  # Пример решения
+    function_name = db.Column(db.String(200), nullable=False)  # Название функции
+    initial_code = db.Column(db.Text)  # Начальный код для задачи
+    order_number = db.Column(db.Integer, nullable=False)
+    is_required = db.Column(db.Boolean, default=False)
+    tests = db.relationship('TaskTest', backref='task', lazy=True, cascade='all, delete-orphan')
 
 class TestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -102,6 +114,15 @@ class TestResult(db.Model):
 
     user = db.relationship('User', backref=db.backref('test_results', lazy=True))
     test = db.relationship('TheoryTest', backref=db.backref('results', lazy=True))
+
+class TaskTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('practice_task.id'), nullable=False)
+    function = db.Column(db.String(200), nullable=False)  # Название функции с аргументами
+    input_data = db.Column(db.Text, nullable=False)  # Аргументы функции
+    expected_output = db.Column(db.Text, nullable=False)
+    is_hidden = db.Column(db.Boolean, default=False)
+    order_number = db.Column(db.Integer, nullable=False)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -638,34 +659,64 @@ def delete_test_question(lesson_id, question_id):
     flash('Вопрос успешно удален')
     return redirect(url_for('edit_theory_test', lesson_id=lesson_id))
 
-@app.route('/admin/lessons/<int:lesson_id>/tasks/add', methods=['GET', 'POST'])
+@app.route('/admin/lessons/<int:lesson_id>/practice/add', methods=['GET', 'POST'])
 @login_required
 def add_practice_task(lesson_id):
-    if not current_user.is_admin:
-        abort(403)
-    
     lesson = Lesson.query.get_or_404(lesson_id)
     
     if request.method == 'POST':
-        title = request.form.get('title')
-        description = request.form.get('description')
-        initial_code = request.form.get('initial_code')
-        test_cases = request.form.get('test_cases')
-        solution = request.form.get('solution')
-        
-        task = PracticeTask(
-            lesson_id=lesson.id,
-            title=title,
-            description=description,
-            initial_code=initial_code,
-            test_cases=test_cases,
-            solution=solution
-        )
-        
-        db.session.add(task)
-        db.session.commit()
-        flash('Практическая задача успешно добавлена', 'success')
-        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+        try:
+            # Получаем данные из формы
+            title = request.form.get('title')
+            description = request.form.get('description')
+            function_name = request.form.get('function_name')
+            initial_code = request.form.get('initial_code')
+            order_number = int(request.form.get('order_number'))
+            is_required = 'is_required' in request.form
+            
+            # Проверяем обязательные поля
+            if not function_name:
+                flash('Необходимо указать имя функции', 'danger')
+                return render_template('add_practice_task.html', lesson=lesson)
+            
+            # Создаем задачу
+            task = PracticeTask(
+                lesson_id=lesson.id,
+                title=title,
+                description=description,
+                function_name=function_name,
+                initial_code=initial_code,
+                order_number=order_number,
+                is_required=is_required
+            )
+            db.session.add(task)
+            db.session.flush()  # Получаем ID задачи
+            
+            # Обрабатываем загрузку тестов из файла
+            if 'file' in request.files and request.files['file'].filename:
+                file = request.files['file']
+                if file.filename.endswith('.txt'):
+                    content = file.read().decode('utf-8')
+                    tests = parse_test_file(content)
+                    
+                    for test_data in tests:
+                        test = TaskTest(
+                            task_id=task.id,
+                            function=test_data['function'],
+                            input_data=test_data['input_data'],
+                            expected_output=test_data['expected_output'],
+                            is_hidden=test_data['is_hidden'],
+                            order_number=test_data['order_number']
+                        )
+                        db.session.add(test)
+            
+            db.session.commit()
+            flash('Задача успешно добавлена', 'success')
+            return redirect(url_for('edit_practice_tasks', lesson_id=lesson.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Ошибка при добавлении задачи: {str(e)}', 'danger')
     
     return render_template('add_practice_task.html', lesson=lesson)
 
@@ -776,6 +827,252 @@ def test_results(lesson_id):
     ).order_by(TestResult.created_at.desc()).all()
     
     return render_template('test_results.html', lesson=lesson, test=test, results=results)
+
+@app.route('/admin/task-tests/add', methods=['POST'])
+@login_required
+def add_task_test():
+    task_id = request.form.get('task_id')
+    input_data = request.form.get('input_data')
+    expected_output = request.form.get('expected_output')
+    is_hidden = 'is_hidden' in request.form
+    
+    task = PracticeTask.query.get_or_404(task_id)
+    
+    # Определяем порядковый номер для нового теста
+    last_test = TaskTest.query.filter_by(task_id=task_id).order_by(TaskTest.order_number.desc()).first()
+    order_number = (last_test.order_number + 1) if last_test else 1
+    
+    test = TaskTest(
+        task_id=task_id,
+        function=input_data,
+        input_data=input_data,
+        expected_output=expected_output,
+        is_hidden=is_hidden,
+        order_number=order_number
+    )
+    
+    db.session.add(test)
+    db.session.commit()
+    
+    flash('Тест успешно добавлен', 'success')
+    return redirect(url_for('edit_practice_tasks', lesson_id=task.lesson_id))
+
+@app.route('/admin/task-tests/<int:test_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_task_test(test_id):
+    test = TaskTest.query.get_or_404(test_id)
+    task = test.task
+    lesson_id = task.lesson_id
+    
+    db.session.delete(test)
+    db.session.commit()
+    
+    flash('Тест успешно удален', 'success')
+    return redirect(url_for('edit_practice_tasks', lesson_id=lesson_id))
+
+@app.route('/admin/practice-tasks/<int:task_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_practice_task(task_id):
+    task = PracticeTask.query.get_or_404(task_id)
+    
+    if request.method == 'POST':
+        task.title = request.form.get('title')
+        task.description = request.form.get('description')
+        task.function_name = request.form.get('function_name')
+        task.initial_code = request.form.get('initial_code')
+        task.order_number = int(request.form.get('order_number'))
+        task.is_required = 'is_required' in request.form
+        
+        db.session.commit()
+        flash('Задача успешно обновлена', 'success')
+        return redirect(url_for('edit_practice_tasks', lesson_id=task.lesson_id))
+    
+    return render_template('edit_practice_task.html', task=task)
+
+@app.route('/admin/task-tests/upload', methods=['POST'])
+@login_required
+@admin_required
+def upload_task_tests():
+    if 'file' not in request.files:
+        flash('Файл не выбран', 'danger')
+        return redirect(request.referrer or url_for('index'))
+        
+    file = request.files['file']
+    task_id = request.form.get('task_id')
+    
+    if not file or not task_id:
+        flash('Необходимо выбрать файл и указать ID задачи', 'danger')
+        return redirect(request.referrer or url_for('index'))
+        
+    if not file.filename.endswith('.txt'):
+        flash('Поддерживаются только текстовые файлы (.txt)', 'danger')
+        return redirect(request.referrer or url_for('index'))
+        
+    task = PracticeTask.query.get_or_404(task_id)
+    
+    try:
+        content = file.read().decode('utf-8')
+        tests = parse_test_file(content)
+        
+        for test_data in tests:
+            test = TaskTest(
+                task_id=task_id,
+                function=test_data['function'],
+                input_data=test_data['input_data'],
+                expected_output=test_data['expected_output'],
+                is_hidden=test_data['is_hidden'],
+                order_number=test_data['order_number']
+            )
+            db.session.add(test)
+            
+        db.session.commit()
+        flash(f'Успешно добавлено {len(tests)} тестов', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка при обработке файла: {str(e)}', 'danger')
+        
+    return redirect(url_for('edit_practice_tasks', lesson_id=task.lesson_id))
+
+def parse_test_file(content):
+    tests = []
+    order_number = 1
+    
+    for line in content.split('\n'):
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+            
+        # Проверяем, является ли тест скрытым
+        is_hidden = line.startswith('#')
+        if is_hidden:
+            line = line[1:].strip()
+            
+        # Извлекаем функцию и ожидаемый результат
+        try:
+            # Удаляем скобки и разделяем на функцию и результат
+            line = line.strip('()')
+            function_part, expected_output = line.split(',', 1)
+            
+            # Извлекаем имя функции и аргументы
+            function_name = function_part.split('(')[0].strip()
+            args = function_part[function_part.find('(')+1:function_part.rfind(')')].strip()
+            
+            test = {
+                'order_number': order_number,
+                'function': function_name,
+                'input_data': args,
+                'expected_output': expected_output.strip(),
+                'is_hidden': is_hidden
+            }
+            
+            tests.append(test)
+            order_number += 1
+            
+        except Exception as e:
+            print(f"Ошибка при разборе строки: {line}")
+            print(f"Ошибка: {str(e)}")
+            continue
+            
+    return tests
+
+def next_line(content, current_line):
+    lines = content.split('\n')
+    current_index = lines.index(current_line)
+    if current_index + 1 < len(lines):
+        return lines[current_index + 1].strip()
+    return ''
+
+@app.route('/tasks/<int:task_id>/solve', methods=['GET', 'POST'])
+@login_required
+def solve_task(task_id):
+    task = PracticeTask.query.get_or_404(task_id)
+    
+    if request.method == 'POST':
+        user_code = request.form.get('code')
+        results = []
+        
+        for test in task.tests:
+            try:
+                # Создаем временный файл с кодом пользователя
+                with open('temp.py', 'w', encoding='utf-8') as f:
+                    f.write(user_code)
+                
+                # Создаем строку для вызова функции с аргументами
+                function_call = f"print({test.function}({test.input_data}))"
+                
+                # Запускаем код с тестовыми данными
+                process = subprocess.Popen(
+                    ['python', '-c', f"{user_code}\n{function_call}"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                # Получаем результат
+                stdout, stderr = process.communicate()
+                
+                # Проверяем результат
+                is_correct = stdout.strip() == test.expected_output.strip()
+                error = stderr if stderr else None
+                
+                results.append({
+                    'test_number': test.order_number,
+                    'function': test.function,
+                    'arguments': test.input_data,
+                    'expected': test.expected_output,
+                    'actual': stdout.strip(),
+                    'is_correct': is_correct,
+                    'error': error,
+                    'is_hidden': test.is_hidden
+                })
+                
+            except Exception as e:
+                results.append({
+                    'test_number': test.order_number,
+                    'function': test.function,
+                    'arguments': test.input_data,
+                    'expected': test.expected_output,
+                    'actual': None,
+                    'is_correct': False,
+                    'error': str(e),
+                    'is_hidden': test.is_hidden
+                })
+            
+            finally:
+                # Удаляем временный файл
+                if os.path.exists('temp.py'):
+                    os.remove('temp.py')
+        
+        # Проверяем, все ли тесты пройдены
+        all_tests_passed = all(r['is_correct'] for r in results)
+        
+        return render_template('solve_task.html', 
+                             task=task, 
+                             results=results,
+                             all_tests_passed=all_tests_passed,
+                             user_code=user_code)
+    
+    return render_template('solve_task.html', task=task)
+
+@app.route('/admin/practice-tasks/<int:task_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_practice_task(task_id):
+    task = PracticeTask.query.get_or_404(task_id)
+    lesson_id = task.lesson_id
+    
+    try:
+        db.session.delete(task)
+        db.session.commit()
+        flash('Задача успешно удалена', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка при удалении задачи: {str(e)}', 'danger')
+    
+    return redirect(url_for('edit_practice_tasks', lesson_id=lesson_id))
 
 if __name__ == '__main__':
     with app.app_context():

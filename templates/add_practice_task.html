@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Добавление практической задачи</h2>
+    
+    <form method="POST" class="mt-4">
+        <div class="form-group">
+            <label for="title">Название задачи</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="description">Описание задачи</label>
+            <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="function_name">Имя функции</label>
+            <input type="text" class="form-control" id="function_name" name="function_name" required>
+            <small class="form-text text-muted">Имя функции, которую должен написать студент (например, "sum_numbers")</small>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="initial_code">Начальный код</label>
+            <textarea class="form-control" id="initial_code" name="initial_code" rows="10"></textarea>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="order_number">Порядковый номер</label>
+            <input type="number" class="form-control" id="order_number" name="order_number" required>
+        </div>
+        
+        <div class="form-check mt-3">
+            <input type="checkbox" class="form-check-input" id="is_required" name="is_required">
+            <label class="form-check-label" for="is_required">Обязательная задача</label>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>Тесты для задачи</h4>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="test_file">Загрузить тесты из файла</label>
+                    <input type="file" class="form-control-file" id="test_file" name="file" accept=".txt">
+                    <small class="form-text text-muted">
+                        Поддерживается формат .txt. Пример формата можно скачать <a href="{{ url_for('static', filename='test_template.txt') }}" download>здесь</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Добавить задачу</button>
+            <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-secondary">Назад</a>
+        </div>
+    </form>
+</div>
+
+<!-- Подключаем CodeMirror для подсветки синтаксиса -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+
+<script>
+    // Инициализация редактора кода
+    var editor = CodeMirror.fromTextArea(document.getElementById("initial_code"), {
+        mode: "python",
+        lineNumbers: true,
+        theme: "default",
+        indentUnit: 4,
+        lineWrapping: true
+    });
+</script>
+{% endblock %} 

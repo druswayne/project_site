@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Редактирование практической задачи</h2>
+    
+    <form method="POST" class="mt-4">
+        <div class="form-group">
+            <label for="title">Название задачи</label>
+            <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="description">Описание задачи</label>
+            <textarea class="form-control" id="description" name="description" rows="5" required>{{ task.description }}</textarea>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="function_name">Название функции</label>
+            <input type="text" class="form-control" id="function_name" name="function_name" value="{{ task.function_name }}" required>
+            <small class="form-text text-muted">Например: sum_numbers(a, b, c)</small>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="initial_code">Начальный код</label>
+            <textarea class="form-control" id="initial_code" name="initial_code" rows="10">{{ task.initial_code }}</textarea>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="order_number">Порядковый номер</label>
+            <input type="number" class="form-control" id="order_number" name="order_number" value="{{ task.order_number }}" required>
+        </div>
+        
+        <div class="form-check mt-3">
+            <input type="checkbox" class="form-check-input" id="is_required" name="is_required" {% if task.is_required %}checked{% endif %}>
+            <label class="form-check-label" for="is_required">Обязательная задача</label>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            <a href="{{ url_for('edit_practice_tasks', lesson_id=task.lesson_id) }}" class="btn btn-secondary">Назад</a>
+        </div>
+    </form>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Тесты для задачи</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('upload_task_tests') }}" enctype="multipart/form-data">
+                <input type="hidden" name="task_id" value="{{ task.id }}">
+                <div class="form-group">
+                    <label for="test_file">Загрузить тесты из файла</label>
+                    <input type="file" class="form-control-file" id="test_file" name="file" accept=".txt" required>
+                    <small class="form-text text-muted">
+                        Поддерживается формат .txt. Пример формата можно скачать <a href="{{ url_for('static', filename='test_template.txt') }}" download>здесь</a>
+                    </small>
+                </div>
+                <button type="submit" class="btn btn-success mt-3">Загрузить тесты</button>
+            </form>
+            
+            <div class="mt-4">
+                <h5>Текущие тесты:</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Функция</th>
+                                <th>Аргументы</th>
+                                <th>Ожидаемый результат</th>
+                                <th>Тип</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test in task.tests %}
+                            <tr>
+                                <td>{{ test.order_number }}</td>
+                                <td><pre class="mb-0">{{ test.function }}</pre></td>
+                                <td><pre class="mb-0">{{ test.input_data }}</pre></td>
+                                <td><pre class="mb-0">{{ test.expected_output }}</pre></td>
+                                <td>
+                                    {% if test.is_hidden %}
+                                        <span class="badge bg-danger">Скрытый</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Открытый</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('delete_task_test', test_id=test.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Удалить тест?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Подключаем CodeMirror для подсветки синтаксиса -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+
+<script>
+    // Инициализация редактора кода
+    var editor = CodeMirror.fromTextArea(document.getElementById("initial_code"), {
+        mode: "python",
+        lineNumbers: true,
+        theme: "default",
+        indentUnit: 4,
+        lineWrapping: true
+    });
+</script>
+{% endblock %} 

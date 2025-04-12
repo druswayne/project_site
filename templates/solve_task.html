@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ task.title }}</h2>
+            {% if task.is_required %}
+                <span class="badge bg-primary">Обязательная задача</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <h4>Описание задачи</h4>
+                <p>{{ task.description }}</p>
+            </div>
+            
+            <div class="mb-4">
+                <h4>Ваше решение</h4>
+                <form method="POST" action="{{ url_for('check_solution', task_id=task.id) }}">
+                    <div id="editor"></div>
+                    <input type="hidden" name="code" id="code">
+                    <button type="submit" class="btn btn-primary mt-3">Проверить решение</button>
+                </form>
+            </div>
+            
+            <div class="mb-4">
+                <h4>Примеры тестов</h4>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Входные данные</th>
+                                <th>Ожидаемый результат</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test in task.tests if not test.is_hidden %}
+                            <tr>
+                                <td>{{ test.order_number }}</td>
+                                <td><pre class="mb-0">{{ test.input_data }}</pre></td>
+                                <td><pre class="mb-0">{{ test.expected_output }}</pre></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Подключаем CodeMirror для редактора кода -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+
+<script>
+    // Инициализация редактора кода
+    var editor = CodeMirror(document.getElementById("editor"), {
+        value: `{{ task.initial_code }}`,
+        mode: "python",
+        lineNumbers: true,
+        theme: "default",
+        indentUnit: 4,
+        lineWrapping: true
+    });
+    
+    // При отправке формы копируем код из редактора в скрытое поле
+    document.querySelector('form').onsubmit = function() {
+        document.getElementById('code').value = editor.getValue();
+    };
+</script>
+{% endblock %} 

@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Практические задачи урока "{{ lesson.title }}"</h4>
+            <div>
+                <a href="{{ url_for('add_practice_task', lesson_id=lesson.id) }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Добавить задачу
+                </a>
+                <a href="{{ url_for('view_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Назад
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if lesson.practice_tasks %}
+                <div class="accordion" id="tasksAccordion">
+                    {% for task in lesson.practice_tasks|sort(attribute='order_number') %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#task{{ task.id }}">
+                                <div class="d-flex justify-content-between w-100 me-3">
+                                    <span>
+                                        {% if task.is_required %}
+                                            <span class="badge bg-primary me-2">Обязательная</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary me-2">Дополнительная</span>
+                                        {% endif %}
+                                        {{ task.title }}
+                                    </span>
+                                    <span class="text-muted">Тестов: {{ task.tests|length }}</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="task{{ task.id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" 
+                             data-bs-parent="#tasksAccordion">
+                            <div class="accordion-body">
+                                <div class="mb-3">
+                                    <h5>Описание задачи</h5>
+                                    <p>{{ task.description }}</p>
+                                </div>
+
+                                <div class="mb-3">
+                                    <h5>Тесты</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Входные данные</th>
+                                                    <th>Ожидаемый результат</th>
+                                                    <th>Тип</th>
+                                                    <th>Действия</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for test in task.tests|sort(attribute='order_number') %}
+                                                <tr>
+                                                    <td>{{ test.order_number }}</td>
+                                                    <td><pre class="mb-0">{{ test.input_data }}</pre></td>
+                                                    <td><pre class="mb-0">{{ test.expected_output }}</pre></td>
+                                                    <td>
+                                                        {% if test.is_hidden %}
+                                                            <span class="badge bg-danger">Скрытый</span>
+                                                        {% else %}
+                                                            <span class="badge bg-success">Открытый</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <button type="button" class="btn btn-sm btn-primary" 
+                                                                onclick="editTest({{ test.id }})">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <form method="POST" action="{{ url_for('delete_task_test', test_id=test.id) }}" 
+                                                              class="d-inline" onsubmit="return confirm('Удалить тест?')">
+                                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-primary" onclick="addTest({{ task.id }})">
+                                        <i class="bi bi-plus-circle"></i> Добавить тест
+                                    </button>
+                                    <div>
+                                        <a href="{{ url_for('edit_practice_task', task_id=task.id) }}" class="btn btn-warning">
+                                            <i class="bi bi-pencil"></i> Редактировать задачу
+                                        </a>
+                                        <form method="POST" action="{{ url_for('delete_practice_task', task_id=task.id) }}" 
+                                              class="d-inline" onsubmit="return confirm('Удалить задачу?')">
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="bi bi-trash"></i> Удалить задачу
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Практические задачи еще не добавлены
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для добавления/редактирования теста -->
+<div class="modal fade" id="testModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавление теста</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="testForm" method="POST">
+                    <input type="hidden" name="task_id" id="taskId">
+                    <div class="mb-3">
+                        <label class="form-label">Входные данные</label>
+                        <textarea class="form-control" name="input_data" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ожидаемый результат</label>
+                        <textarea class="form-control" name="expected_output" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_hidden" id="isHidden">
+                            <label class="form-check-label" for="isHidden">
+                                Скрытый тест
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="submit" form="testForm" class="btn btn-primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addTest(taskId) {
+    document.getElementById('taskId').value = taskId;
+    document.getElementById('testForm').action = "{{ url_for('add_task_test') }}";
+    document.getElementById('testForm').reset();
+    new bootstrap.Modal(document.getElementById('testModal')).show();
+}
+
+function editTest(testId) {
+    // Здесь будет код для загрузки данных теста и открытия модального окна
+    // Пока оставим заглушку
+    alert('Редактирование теста будет доступно в следующей версии');
+}
+</script>
+{% endblock %} 
