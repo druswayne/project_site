@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Добавление вопроса в тест "{{ test.title }}"</h2>
+    
+    <form method="POST" class="mt-4">
+        <div class="mb-3">
+            <label for="question_text" class="form-label">Текст вопроса</label>
+            <textarea class="form-control" id="question_text" name="question_text" rows="3" required></textarea>
+        </div>
+        
+        <div class="mb-3">
+            <label for="question_type" class="form-label">Тип вопроса</label>
+            <select class="form-select" id="question_type" name="question_type" required>
+                <option value="single_choice">Один правильный ответ</option>
+                <option value="multiple_choice">Несколько правильных ответов</option>
+                <option value="text">Текстовый ответ</option>
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="points" class="form-label">Баллы за правильный ответ</label>
+            <input type="number" class="form-control" id="points" name="points" value="1" min="1" required>
+        </div>
+        
+        <div id="options-container" class="mb-3">
+            <label class="form-label">Варианты ответов</label>
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" name="options[]" placeholder="Вариант ответа">
+                <button type="button" class="btn btn-outline-secondary" onclick="addOption()">Добавить</button>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="correct_answer" class="form-label">Правильный ответ</label>
+            <input type="text" class="form-control" id="correct_answer" name="correct_answer" required>
+            <div class="form-text">
+                Для вопросов с одним ответом - введите номер правильного варианта (1, 2, 3...)<br>
+                Для вопросов с несколькими ответами - введите номера через запятую (1,3,4)<br>
+                Для текстовых вопросов - введите правильный ответ
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="explanation" class="form-label">Объяснение правильного ответа</label>
+            <textarea class="form-control" id="explanation" name="explanation" rows="3"></textarea>
+        </div>
+        
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Добавить вопрос</button>
+            <a href="{{ url_for('edit_theory_test', lesson_id=lesson.id) }}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function addOption() {
+    const container = document.getElementById('options-container');
+    const inputGroup = document.createElement('div');
+    inputGroup.className = 'input-group mb-2';
+    inputGroup.innerHTML = `
+        <input type="text" class="form-control" name="options[]" placeholder="Вариант ответа">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">Удалить</button>
+    `;
+    container.appendChild(inputGroup);
+}
+
+document.getElementById('question_type').addEventListener('change', function() {
+    const optionsContainer = document.getElementById('options-container');
+    const correctAnswerField = document.getElementById('correct_answer');
+    
+    if (this.value === 'text') {
+        optionsContainer.style.display = 'none';
+        correctAnswerField.placeholder = 'Введите правильный ответ';
+    } else {
+        optionsContainer.style.display = 'block';
+        correctAnswerField.placeholder = this.value === 'single_choice' ? 
+            'Введите номер правильного варианта' : 
+            'Введите номера правильных вариантов через запятую';
+    }
+});
+</script>
+{% endblock %} 

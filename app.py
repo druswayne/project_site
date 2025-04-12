@@ -57,14 +57,27 @@ class Lesson(db.Model):
 class TheoryTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    max_score = db.Column(db.Integer, default=100)
+    time_limit = db.Column(db.Integer)  # Время на прохождение в минутах
     questions = db.relationship('TestQuestion', backref='test', lazy=True)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+    is_active = db.Column(db.Boolean, default=True)
+    required_score = db.Column(db.Integer, default=70)  # Минимальный балл для прохождения
 
 class TestQuestion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_id = db.Column(db.Integer, db.ForeignKey('theory_test.id'), nullable=False)
     question_text = db.Column(db.Text, nullable=False)
+    question_type = db.Column(db.String(20), nullable=False)  # single_choice, multiple_choice, text
     correct_answer = db.Column(db.String(200), nullable=False)
     options = db.Column(db.JSON)  # Список вариантов ответов
+    points = db.Column(db.Integer, default=1)  # Баллы за правильный ответ
+    explanation = db.Column(db.Text)  # Объяснение правильного ответа
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
 
 class PracticeTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,6 +87,21 @@ class PracticeTask(db.Model):
     initial_code = db.Column(db.Text)
     test_cases = db.Column(db.JSON)  # Список тестовых случаев
     solution = db.Column(db.Text)  # Пример решения
+
+class TestResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    test_id = db.Column(db.Integer, db.ForeignKey('theory_test.id'), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    is_passed = db.Column(db.Boolean, default=False)
+    started_at = db.Column(db.DateTime, nullable=False)
+    completed_at = db.Column(db.DateTime)
+    answers = db.Column(db.JSON)  # Хранение ответов пользователя
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
+    user = db.relationship('User', backref=db.backref('test_results', lazy=True))
+    test = db.relationship('TheoryTest', backref=db.backref('results', lazy=True))
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -480,26 +508,26 @@ def add_theory_test(lesson_id):
     lesson = Lesson.query.get_or_404(lesson_id)
     
     if request.method == 'POST':
-        questions = request.form.getlist('questions[]')
-        answers = request.form.getlist('answers[]')
-        options = request.form.getlist('options[]')
+        title = request.form.get('title')
+        description = request.form.get('description')
+        max_score = int(request.form.get('max_score', 100))
+        time_limit = int(request.form.get('time_limit', 0))
+        required_score = int(request.form.get('required_score', 70))
         
-        test = TheoryTest(lesson_id=lesson.id)
+        test = TheoryTest(
+            lesson_id=lesson_id,
+            title=title,
+            description=description,
+            max_score=max_score,
+            time_limit=time_limit,
+            required_score=required_score
+        )
+        
         db.session.add(test)
         db.session.commit()
         
-        for i in range(len(questions)):
-            question = TestQuestion(
-                test_id=test.id,
-                question_text=questions[i],
-                correct_answer=answers[i],
-                options=options[i].split(',')
-            )
-            db.session.add(question)
-        
-        db.session.commit()
-        flash('Тест успешно создан', 'success')
-        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+        flash('Тест успешно создан')
+        return redirect(url_for('edit_theory_test', lesson_id=lesson_id))
     
     return render_template('add_theory_test.html', lesson=lesson)
 
@@ -510,31 +538,105 @@ def edit_theory_test(lesson_id):
         abort(403)
     
     lesson = Lesson.query.get_or_404(lesson_id)
-    test = lesson.theory_test
+    test = TheoryTest.query.filter_by(lesson_id=lesson_id).first()
+    
+    if not test:
+        return redirect(url_for('add_theory_test', lesson_id=lesson_id))
     
     if request.method == 'POST':
-        questions = request.form.getlist('questions[]')
-        answers = request.form.getlist('answers[]')
-        options = request.form.getlist('options[]')
-        
-        # Удаляем старые вопросы
-        TestQuestion.query.filter_by(test_id=test.id).delete()
-        
-        # Добавляем новые вопросы
-        for i in range(len(questions)):
-            question = TestQuestion(
-                test_id=test.id,
-                question_text=questions[i],
-                correct_answer=answers[i],
-                options=options[i].split(',')
-            )
-            db.session.add(question)
+        test.title = request.form.get('title')
+        test.description = request.form.get('description')
+        test.max_score = int(request.form.get('max_score', 100))
+        test.time_limit = int(request.form.get('time_limit', 0))
+        test.required_score = int(request.form.get('required_score', 70))
+        test.is_active = bool(request.form.get('is_active'))
         
         db.session.commit()
-        flash('Тест успешно обновлен', 'success')
-        return redirect(url_for('view_lesson', lesson_id=lesson.id))
+        flash('Тест успешно обновлен')
+        return redirect(url_for('edit_theory_test', lesson_id=lesson_id))
     
     return render_template('edit_theory_test.html', lesson=lesson, test=test)
+
+@app.route('/admin/lessons/<int:lesson_id>/test/questions/add', methods=['GET', 'POST'])
+@login_required
+def add_test_question(lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    test = TheoryTest.query.filter_by(lesson_id=lesson_id).first()
+    
+    if not test:
+        flash('Сначала создайте тест')
+        return redirect(url_for('add_theory_test', lesson_id=lesson_id))
+    
+    if request.method == 'POST':
+        question_text = request.form.get('question_text')
+        question_type = request.form.get('question_type')
+        correct_answer = request.form.get('correct_answer')
+        points = int(request.form.get('points', 1))
+        explanation = request.form.get('explanation')
+        
+        options = []
+        if question_type in ['single_choice', 'multiple_choice']:
+            options = request.form.getlist('options[]')
+        
+        question = TestQuestion(
+            test_id=test.id,
+            question_text=question_text,
+            question_type=question_type,
+            correct_answer=correct_answer,
+            options=options,
+            points=points,
+            explanation=explanation
+        )
+        
+        db.session.add(question)
+        db.session.commit()
+        
+        flash('Вопрос успешно добавлен')
+        return redirect(url_for('edit_theory_test', lesson_id=lesson_id))
+    
+    return render_template('add_test_question.html', lesson=lesson, test=test)
+
+@app.route('/admin/lessons/<int:lesson_id>/test/questions/<int:question_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_test_question(lesson_id, question_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    lesson = Lesson.query.get_or_404(lesson_id)
+    test = TheoryTest.query.filter_by(lesson_id=lesson_id).first()
+    question = TestQuestion.query.get_or_404(question_id)
+    
+    if request.method == 'POST':
+        question.question_text = request.form.get('question_text')
+        question.question_type = request.form.get('question_type')
+        question.correct_answer = request.form.get('correct_answer')
+        question.points = int(request.form.get('points', 1))
+        question.explanation = request.form.get('explanation')
+        
+        if question.question_type in ['single_choice', 'multiple_choice']:
+            question.options = request.form.getlist('options[]')
+        
+        db.session.commit()
+        flash('Вопрос успешно обновлен')
+        return redirect(url_for('edit_theory_test', lesson_id=lesson_id))
+    
+    return render_template('edit_test_question.html', lesson=lesson, test=test, question=question)
+
+@app.route('/admin/lessons/<int:lesson_id>/test/questions/<int:question_id>/delete', methods=['POST'])
+@login_required
+def delete_test_question(lesson_id, question_id):
+    if not current_user.is_admin:
+        abort(403)
+    
+    question = TestQuestion.query.get_or_404(question_id)
+    db.session.delete(question)
+    db.session.commit()
+    
+    flash('Вопрос успешно удален')
+    return redirect(url_for('edit_theory_test', lesson_id=lesson_id))
 
 @app.route('/admin/lessons/<int:lesson_id>/tasks/add', methods=['GET', 'POST'])
 @login_required
@@ -595,6 +697,85 @@ def update_lesson_description(lesson_id):
     
     flash('Описание урока успешно обновлено', 'success')
     return redirect(url_for('view_lesson', lesson_id=lesson.id))
+
+@app.route('/lessons/<int:lesson_id>/test', methods=['GET', 'POST'])
+@login_required
+def take_test(lesson_id):
+    lesson = Lesson.query.get_or_404(lesson_id)
+    test = TheoryTest.query.filter_by(lesson_id=lesson_id, is_active=True).first()
+    
+    if not test:
+        flash('Тест не найден или неактивен')
+        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+    
+    # Проверяем, не проходил ли пользователь тест ранее
+    previous_result = TestResult.query.filter_by(
+        user_id=current_user.id,
+        test_id=test.id
+    ).first()
+    
+    if previous_result and previous_result.is_passed:
+        flash('Вы уже успешно прошли этот тест')
+        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+    
+    if request.method == 'POST':
+        # Создаем новую попытку прохождения теста
+        result = TestResult(
+            user_id=current_user.id,
+            test_id=test.id,
+            started_at=datetime.now(),
+            answers={}
+        )
+        
+        total_score = 0
+        for question in test.questions:
+            answer = request.form.get(f'question_{question.id}')
+            result.answers[str(question.id)] = answer
+            
+            if question.question_type == 'single_choice':
+                if answer == question.correct_answer:
+                    total_score += question.points
+            elif question.question_type == 'multiple_choice':
+                correct_answers = set(question.correct_answer.split(','))
+                user_answers = set(answer.split(',')) if answer else set()
+                if correct_answers == user_answers:
+                    total_score += question.points
+            elif question.question_type == 'text':
+                if answer.lower().strip() == question.correct_answer.lower().strip():
+                    total_score += question.points
+        
+        result.score = total_score
+        result.is_passed = total_score >= test.required_score
+        result.completed_at = datetime.now()
+        
+        db.session.add(result)
+        db.session.commit()
+        
+        if result.is_passed:
+            flash('Поздравляем! Вы успешно прошли тест')
+        else:
+            flash(f'К сожалению, вы не прошли тест. Набрано баллов: {total_score}')
+        
+        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+    
+    return render_template('take_test.html', lesson=lesson, test=test)
+
+@app.route('/lessons/<int:lesson_id>/test/results')
+@login_required
+def test_results(lesson_id):
+    lesson = Lesson.query.get_or_404(lesson_id)
+    test = TheoryTest.query.filter_by(lesson_id=lesson_id).first()
+    
+    if not test:
+        flash('Тест не найден')
+        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+    
+    results = TestResult.query.filter_by(
+        user_id=current_user.id,
+        test_id=test.id
+    ).order_by(TestResult.created_at.desc()).all()
+    
+    return render_template('test_results.html', lesson=lesson, test=test, results=results)
 
 if __name__ == '__main__':
     with app.app_context():

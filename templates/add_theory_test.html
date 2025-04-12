@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Добавление теста для урока "{{ lesson.title }}"</h2>
+    
+    <form method="POST" class="mt-4">
+        <div class="mb-3">
+            <label for="title" class="form-label">Название теста</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        
+        <div class="mb-3">
+            <label for="description" class="form-label">Описание теста</label>
+            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="max_score" class="form-label">Максимальный балл</label>
+                <input type="number" class="form-control" id="max_score" name="max_score" value="100" min="1" required>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <label for="time_limit" class="form-label">Лимит времени (минут)</label>
+                <input type="number" class="form-control" id="time_limit" name="time_limit" value="0" min="0">
+                <div class="form-text">0 - без ограничения времени</div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <label for="required_score" class="form-label">Минимальный балл для прохождения</label>
+                <input type="number" class="form-control" id="required_score" name="required_score" value="70" min="1" required>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Создать тест</button>
+            <a href="{{ url_for('view_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %} 

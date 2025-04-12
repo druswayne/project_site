@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="mb-0">Результаты теста "{{ test.title }}"</h2>
+        </div>
+        <div class="card-body">
+            {% if results %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Дата прохождения</th>
+                            <th>Набрано баллов</th>
+                            <th>Статус</th>
+                            <th>Время прохождения</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr>
+                            <td>{{ result.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td>{{ result.score }} из {{ test.max_score }}</td>
+                            <td>
+                                {% if result.is_passed %}
+                                <span class="badge bg-success">Пройден</span>
+                                {% else %}
+                                <span class="badge bg-danger">Не пройден</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if result.completed_at %}
+                                {{ (result.completed_at - result.started_at).seconds // 60 }} минут
+                                {% else %}
+                                Не завершен
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                У вас пока нет результатов прохождения этого теста.
+            </div>
+            {% endif %}
+            
+            <div class="mt-4">
+                <a href="{{ url_for('view_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">Вернуться к уроку</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
