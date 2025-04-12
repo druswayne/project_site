@@ -372,6 +372,36 @@
             color: var(--cyber-dark);
             box-shadow: 0 0 20px var(--cyber-secondary);
         }
+        
+        /* Стили для list-group */
+        .list-group {
+            background-color: var(--cyber-card-bg);
+            border: 1px solid var(--cyber-primary);
+        }
+        
+        .list-group-item {
+            background-color: var(--cyber-card-bg);
+            border-color: rgba(0, 255, 157, 0.1);
+            color: var(--cyber-text-light);
+        }
+        
+        .list-group-item:hover {
+            background-color: rgba(0, 255, 157, 0.05);
+            color: var(--cyber-text-light);
+        }
+        
+        .list-group-item.active {
+            background-color: var(--cyber-primary);
+            border-color: var(--cyber-primary);
+            color: var(--cyber-dark);
+        }
+        
+        /* Стили для card-header */
+        .card-header.bg-primary {
+            background-color: var(--cyber-primary) !important;
+            border-bottom: 1px solid var(--cyber-primary);
+            color: var(--cyber-dark) !important;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
