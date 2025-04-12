@@ -108,97 +108,99 @@
                     </div>
                     
                     <!-- Теоретический материал -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Теоретический материал</h5>
-                            <div>
-                                {% if not lesson.theory_content %}
-                                    <a href="{{ url_for('add_theory', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
-                                        <i class="bi bi-plus-circle"></i> Добавить материал
-                                    </a>
-                                {% else %}
-                                    <a href="{{ url_for('edit_theory', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
-                                        <i class="bi bi-pencil"></i> Редактировать
-                                    </a>
-                                {% endif %}
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Теоретический материал</h5>
+                                <div>
+                                    {% if not lesson.theory_content %}
+                                        <a href="{{ url_for('add_theory', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
+                                            <i class="bi bi-plus-circle"></i> Добавить материал
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('edit_theory', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-pencil"></i> Редактировать
+                                        </a>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
-                        <div class="card">
-                            <div class="card-body">
-                                {% if lesson.theory_content %}
-                                    <div class="theory-preview">
-                                        {{ lesson.theory_content|safe }}
-                                    </div>
-                                    <div class="theory-content">
-                                        {{ lesson.theory_content|safe }}
-                                    </div>
-                                    <div class="text-center mt-2">
-                                        <a class="toggle-theory" onclick="toggleTheory(this)">
-                                            <i class="bi bi-chevron-down"></i> Показать полностью
-                                        </a>
-                                    </div>
-                                {% else %}
-                                    <div class="alert alert-info">
-                                        Теоретический материал еще не добавлен
-                                    </div>
-                                {% endif %}
-                            </div>
+                        <div class="card-body">
+                            {% if lesson.theory_content %}
+                                <div class="theory-content">
+                                    {{ lesson.theory_content|safe }}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info mb-0">
+                                    Теоретический материал еще не добавлен
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
 
                     <!-- Тест по теории -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Тест по теории</h5>
-                            <div>
-                                {% if not lesson.theory_test %}
-                                    <a href="{{ url_for('add_theory_test', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
-                                        <i class="bi bi-plus-circle"></i> Добавить тест
-                                    </a>
-                                {% endif %}
-                                {% if lesson.theory_test %}
-                                    <a href="{{ url_for('edit_theory_test', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
-                                        <i class="bi bi-pencil"></i> Редактировать
-                                    </a>
-                                {% endif %}
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Тест по теории</h5>
+                                <div>
+                                    {% if not lesson.theory_test %}
+                                        <a href="{{ url_for('add_theory_test', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
+                                            <i class="bi bi-plus-circle"></i> Добавить тест
+                                        </a>
+                                    {% endif %}
+                                    {% if lesson.theory_test %}
+                                        <a href="{{ url_for('edit_theory_test', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-pencil"></i> Редактировать
+                                        </a>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
-                        <div class="card">
-                            <div class="card-body">
-                                {% if lesson.theory_test %}
-                                    <p>Тест содержит {{ lesson.theory_test.questions|length }} вопросов</p>
-                                {% else %}
-                                    <div class="alert alert-info">
-                                        Тест по теории еще не создан
-                                    </div>
-                                {% endif %}
-                            </div>
+                        <div class="card-body">
+                            {% if lesson.theory_test %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <p class="mb-0">Тест содержит {{ lesson.theory_test.questions|length }} вопросов</p>
+                                    <a href="{{ url_for('take_test', lesson_id=lesson.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-play-circle"></i> Пройти тест
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info mb-0">
+                                    Тест по теории еще не создан
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
 
                     <!-- Практические задачи -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Практические задачи</h5>
-                            <div>
-                                <a href="{{ url_for('add_practice_task', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
-                                    <i class="bi bi-plus-circle"></i> Добавить задачу
-                                </a>
-                                <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-pencil"></i> Редактировать
-                                </a>
+                    <div class="card shadow mb-4">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Практические задачи</h5>
+                                <div>
+                                    <a href="{{ url_for('add_practice_task', lesson_id=lesson.id) }}" class="btn btn-success btn-sm">
+                                        <i class="bi bi-plus-circle"></i> Добавить задачу
+                                    </a>
+                                    <a href="{{ url_for('edit_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-pencil"></i> Редактировать
+                                    </a>
+                                </div>
                             </div>
                         </div>
-                        <div class="card">
-                            <div class="card-body">
-                                {% if lesson.practice_tasks %}
-                                    <p>Добавлено {{ lesson.practice_tasks|length }} задач</p>
-                                {% else %}
-                                    <div class="alert alert-info">
-                                        Практические задачи еще не добавлены
-                                    </div>
-                                {% endif %}
-                            </div>
+                        <div class="card-body">
+                            {% if lesson.practice_tasks %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <p class="mb-0">Добавлено {{ lesson.practice_tasks|length }} задач</p>
+                                    <a href="{{ url_for('practice_tasks', lesson_id=lesson.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-play-circle"></i> Начать практику
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info mb-0">
+                                    Практические задачи еще не добавлены
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
