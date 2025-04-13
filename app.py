@@ -195,7 +195,7 @@ class Solution(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 @app.route('/')
 def index():
@@ -435,22 +435,39 @@ def view_lesson_theory(lesson_id):
 @login_required
 def view_practice_tasks(lesson_id):
     lesson = Lesson.query.get_or_404(lesson_id)
-    progress = UserProgress.query.filter_by(user_id=current_user.id, lesson_id=lesson_id).first()
+    if not lesson.is_active:
+        flash('Этот урок еще не опубликован.', 'warning')
+        return redirect(url_for('student_dashboard'))
     
-    if not progress:
-        progress = UserProgress(user_id=current_user.id, lesson_id=lesson_id)
-        db.session.add(progress)
-        db.session.commit()
+    # Получаем все обязательные задачи для урока
+    mandatory_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id, is_required=True).all()
     
-    completed_task_ids = [task.id for task in progress.completed_tasks]
-    mandatory_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id, is_required=True).order_by(PracticeTask.order_number).all()
-    optional_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id, is_required=False).order_by(PracticeTask.order_number).all()
+    # Получаем все дополнительные задачи для урока
+    optional_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id, is_required=False).all()
+    
+    # Получаем все решенные задачи пользователя для текущего урока
+    solved_tasks = Solution.query.join(PracticeTask).filter(
+        Solution.user_id == current_user.id,
+        Solution.is_correct == True,
+        PracticeTask.lesson_id == lesson_id
+    ).with_entities(Solution.task_id).all()
+    
+    # Преобразуем в список ID решенных задач
+    solved_task_ids = [task_id for (task_id,) in solved_tasks]
+    
+    # Рассчитываем прогресс выполнения обязательных задач
+    total_mandatory = len(mandatory_tasks)
+    solved_mandatory = sum(1 for task in mandatory_tasks if task.id in solved_task_ids)
+    progress_percentage = round((solved_mandatory / total_mandatory * 100) if total_mandatory > 0 else 0)
     
     return render_template('student/practice.html',
                          lesson=lesson,
                          mandatory_tasks=mandatory_tasks,
                          optional_tasks=optional_tasks,
-                         completed_task_ids=completed_task_ids)
+                         completed_task_ids=solved_task_ids,
+                         progress_percentage=progress_percentage,
+                         solved_mandatory=solved_mandatory,
+                         total_mandatory=total_mandatory)
 
 @app.route('/student/lesson/<int:lesson_id>/practice/task/<int:task_id>/complete', methods=['POST'])
 @login_required

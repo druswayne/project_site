@@ -108,6 +108,25 @@
         </div>
     </div>
     
+    <!-- Прогресс выполнения -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Прогресс выполнения</h5>
+            <div class="progress mb-2" style="height: 25px;">
+                <div class="progress-bar bg-success" role="progressbar" 
+                     style="width: {{ progress_percentage }}%" 
+                     aria-valuenow="{{ progress_percentage }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                    {{ progress_percentage }}%
+                </div>
+            </div>
+            <p class="text-muted mb-0">
+                Выполнено {{ solved_mandatory }} из {{ total_mandatory }} обязательных задач
+            </p>
+        </div>
+    </div>
+    
     <div class="text-center mt-4">
         <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">
             Вернуться к уроку
