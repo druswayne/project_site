@@ -338,7 +338,6 @@ def view_student_lesson(lesson_id):
             is_completed=False
         )
         db.session.add(progress)
-        db.session.commit()
     
     # Проверяем, пройден ли тест
     test_result = TestResult.query.filter_by(
@@ -392,7 +391,12 @@ def view_lesson_theory(lesson_id):
             is_completed=False
         )
         db.session.add(progress)
+    
+    # Отмечаем теорию как пройденную
+    if not progress.theory_completed:
+        progress.theory_completed = True
         db.session.commit()
+        flash('Теоретический материал изучен!')
     
     return render_template('student/theory.html', lesson=lesson, progress=progress)
 
@@ -417,7 +421,6 @@ def view_lesson_practice(lesson_id):
             is_completed=False
         )
         db.session.add(progress)
-        db.session.commit()
     
     # Получаем практические задания
     practice_tasks = PracticeTask.query.filter_by(
