@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Уроки пользователя {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Уроки пользователя {{ user.username }}</h1>
+        <a href="{{ url_for('user_list') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Назад к списку пользователей
+        </a>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Информация о пользователе</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Имя:</strong> {{ user.name }}</p>
+            <p><strong>Логин:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Роль:</strong> {{ 'Администратор' if user.is_admin else 'Пользователь' }}</p>
+            <p><strong>Дата регистрации:</strong> {{ user.created_at.strftime('%Y-%m-%d') }}</p>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Прогресс обучения</h5>
+        </div>
+        <div class="card-body">
+            <div class="progress mb-3">
+                <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%">
+                    {{ progress_percentage }}%
+                </div>
+            </div>
+            <p class="mb-0">Пройдено уроков: {{ completed_lessons }}/{{ total_lessons }}</p>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Список уроков</h5>
+        </div>
+        <div class="card-body">
+            {% if lessons %}
+                <div class="list-group">
+                    {% for lesson in lessons %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1 {% if lesson.id in completed_lesson_ids %}text-success{% endif %}">
+                                        {{ lesson.title }}
+                                        {% if lesson.id in completed_lesson_ids %}
+                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                        {% endif %}
+                                    </h5>
+                                    <p class="mb-1">{{ lesson.description }}</p>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    {% if lesson.id in completed_lesson_ids %}
+                                        <span class="badge bg-success me-2">Пройден</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary me-2">Не пройден</span>
+                                    {% endif %}
+                                    <a href="{{ url_for('view_user_lesson_details', user_id=user.id, lesson_id=lesson.id) }}" 
+                                       class="btn btn-sm btn-info">
+                                        <i class="fas fa-info-circle"></i> Подробнее
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Уроки не найдены.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 
