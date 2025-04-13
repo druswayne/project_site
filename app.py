@@ -10,6 +10,8 @@ import secrets
 import string
 from functools import wraps
 import subprocess
+import uuid
+import tempfile
 
 load_dotenv()
 
@@ -1454,6 +1456,97 @@ def submit_solution():
         return jsonify({'success': True})
     else:
         return jsonify({'success': False, 'message': 'Не все тесты пройдены'})
+
+def run_tests(code, task_id):
+    try:
+        # Создаем временную директорию для этого запуска
+        temp_dir = tempfile.mkdtemp()
+        temp_file = os.path.join(temp_dir, f'test_{uuid.uuid4()}.py')
+        
+        # Записываем код в файл
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            f.write(code)
+        
+        # Получаем тесты для задачи
+        task = PracticeTask.query.get(task_id)
+        if not task:
+            return {'success': False, 'error': 'Задача не найдена'}
+        
+        test_cases = task.test_cases
+        results = []
+        
+        # Запускаем каждый тест
+        for test in test_cases:
+            try:
+                # Создаем временный файл для каждого теста
+                test_file = os.path.join(temp_dir, f'test_{uuid.uuid4()}.py')
+                with open(test_file, 'w', encoding='utf-8') as f:
+                    f.write(code + '\n\n' + test['test_code'])
+                
+                # Запускаем тест
+                process = subprocess.Popen(
+                    ['python', test_file],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                stdout, stderr = process.communicate(timeout=5)
+                
+                # Проверяем результат
+                if process.returncode == 0:
+                    results.append({
+                        'name': test['name'],
+                        'passed': True,
+                        'function': test['function'],
+                        'arguments': test['arguments'],
+                        'expected': test['expected'],
+                        'actual': stdout.strip()
+                    })
+                else:
+                    results.append({
+                        'name': test['name'],
+                        'passed': False,
+                        'function': test['function'],
+                        'arguments': test['arguments'],
+                        'expected': test['expected'],
+                        'actual': stdout.strip(),
+                        'error': stderr.strip()
+                    })
+                
+                # Удаляем временный файл теста
+                os.remove(test_file)
+                
+            except subprocess.TimeoutExpired:
+                process.kill()
+                results.append({
+                    'name': test['name'],
+                    'passed': False,
+                    'function': test['function'],
+                    'arguments': test['arguments'],
+                    'expected': test['expected'],
+                    'error': 'Превышено время выполнения теста'
+                })
+            except Exception as e:
+                results.append({
+                    'name': test['name'],
+                    'passed': False,
+                    'function': test['function'],
+                    'arguments': test['arguments'],
+                    'expected': test['expected'],
+                    'error': str(e)
+                })
+        
+        # Удаляем временные файлы и директорию
+        try:
+            os.remove(temp_file)
+            os.rmdir(temp_dir)
+        except:
+            pass
+        
+        return {'success': True, 'tests': results}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 if __name__ == '__main__':
     with app.app_context():
