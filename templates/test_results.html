@@ -49,9 +49,7 @@
 
     <div class="mt-4">
         <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">Вернуться к уроку</a>
-        {% if not results or not results[0].is_passed %}
-            <a href="{{ url_for('take_test', lesson_id=lesson.id) }}" class="btn btn-success">Пройти тест снова</a>
-        {% endif %}
+        <a href="{{ url_for('take_test', lesson_id=lesson.id, retake='true') }}" class="btn btn-success">Пройти тест снова</a>
     </div>
 </div>
 {% endblock %} 

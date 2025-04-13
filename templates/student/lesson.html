@@ -53,19 +53,13 @@
                         <div class="card-body">
                             <h5 class="card-title">Практика</h5>
                             <p class="card-text">Выполните практические задания</p>
-                            {% if lesson.practice_tasks %}
-                                {% if practice_available %}
-                                    <a href="{{ url_for('view_lesson_practice', lesson_id=lesson.id) }}" class="btn btn-primary">
-                                        Перейти к практике
-                                    </a>
-                                {% else %}
-                                    <button class="btn btn-secondary" disabled>
-                                        Сначала пройдите тест
-                                    </button>
-                                {% endif %}
+                            {% if practice_available %}
+                                <a href="{{ url_for('view_lesson_practice', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                    Перейти к практике
+                                </a>
                             {% else %}
                                 <button class="btn btn-secondary" disabled>
-                                    Практика не доступна
+                                    Сначала пройдите тест
                                 </button>
                             {% endif %}
                         </div>

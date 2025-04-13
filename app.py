@@ -340,13 +340,16 @@ def view_student_lesson(lesson_id):
         db.session.add(progress)
     
     # Проверяем, пройден ли тест
-    test_result = TestResult.query.filter_by(
-        user_id=current_user.id,
-        lesson_id=lesson_id
-    ).first()
+    test = TheoryTest.query.filter_by(lesson_id=lesson_id, is_active=True).first()
+    test_result = None
+    if test:
+        test_result = TestResult.query.filter_by(
+            user_id=current_user.id,
+            test_id=test.id
+        ).first()
     
     # Практика доступна только если тест пройден успешно
-    practice_available = test_result and test_result.score >= test_result.test.required_score
+    practice_available = test_result and test_result.is_passed
     
     # Рассчитываем прогресс по блокам
     total_blocks = 3  # теория, тест, практика
@@ -960,15 +963,21 @@ def take_test(lesson_id):
         flash('Тест не найден или неактивен')
         return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
     
-    # Проверяем, не проходил ли пользователь тест ранее
-    previous_result = TestResult.query.filter_by(
+    # Получаем все попытки прохождения теста
+    previous_results = TestResult.query.filter_by(
         user_id=current_user.id,
         test_id=test.id
-    ).first()
+    ).order_by(TestResult.created_at.desc()).all()
     
-    if previous_result and previous_result.is_passed:
-        flash('Вы уже успешно прошли этот тест')
-        return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
+    # Если есть успешная попытка и это GET запрос, показываем результаты
+    if request.method == 'GET' and any(result.is_passed for result in previous_results):
+        # Проверяем, хочет ли пользователь пройти тест снова
+        if request.args.get('retake') == 'true':
+            return render_template('take_test.html', lesson=lesson, test=test)
+        return render_template('test_results.html', 
+                            lesson=lesson, 
+                            test=test, 
+                            results=previous_results)
     
     if request.method == 'POST':
         # Создаем новую попытку прохождения теста
@@ -1018,12 +1027,17 @@ def take_test(lesson_id):
         
         if result.is_passed:
             progress.test_completed = True
+            # Проверяем, все ли блоки пройдены
+            if progress.theory_completed and progress.test_completed:
+                progress.is_completed = True
+                progress.completed_at = datetime.now()
             flash('Поздравляем! Вы успешно прошли тест')
+            db.session.commit()
+            return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
         else:
             flash(f'К сожалению, вы не прошли тест. Набрано баллов: {total_score}')
-        
-        db.session.commit()
-        return redirect(url_for('test_results', lesson_id=lesson_id))
+            db.session.commit()
+            return redirect(url_for('test_results', lesson_id=lesson_id))
     
     return render_template('take_test.html', lesson=lesson, test=test)
 
