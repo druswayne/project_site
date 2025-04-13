@@ -1372,6 +1372,10 @@ def run_tests():
             results.append({
                 'name': f'Тест {test.order_number}',
                 'passed': is_correct,
+                'function': test.function,
+                'arguments': test.input_data,
+                'expected': test.expected_output,
+                'actual': stdout.strip(),
                 'error': error
             })
             
