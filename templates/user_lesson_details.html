@@ -162,7 +162,7 @@
                                                          aria-labelledby="heading{{ task.id }}" data-bs-parent="#commentsAccordion{{ task.id }}">
                                                         <div class="accordion-body p-0">
                                                             <div class="comments-container" style="max-height: 300px; overflow-y: auto;">
-                                                                {% for comment in solution.comments|sort(attribute='created_at') %}
+                                                                {% for comment in solution.comments|sort(attribute='created_at', reverse=true) %}
                                                                     <div class="card mb-2 border-0">
                                                                         <div class="card-body">
                                                                             <div class="d-flex justify-content-between align-items-center">
