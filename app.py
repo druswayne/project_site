@@ -575,12 +575,14 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     
     if request.method == 'POST':
+        name = request.form.get('name')
         username = request.form.get('username')
         email = request.form.get('email')
+        password = request.form.get('password')
         
         # Проверка уникальности имени пользователя
         if username != user.username and User.query.filter_by(username=username).first():
-            flash('Пользователь с таким именем уже существует', 'danger')
+            flash('Пользователь с таким логином уже существует', 'danger')
             return redirect(url_for('edit_user', user_id=user_id))
             
         # Проверка уникальности email
@@ -588,8 +590,13 @@ def edit_user(user_id):
             flash('Пользователь с таким email уже существует', 'danger')
             return redirect(url_for('edit_user', user_id=user_id))
             
+        user.name = name
         user.username = username
         user.email = email
+        
+        # Обновление пароля, если он был указан
+        if password:
+            user.set_password(password)
         
         db.session.commit()
         flash('Данные пользователя успешно обновлены', 'success')
@@ -1633,6 +1640,34 @@ def run_tests(code, task_id):
         
     except Exception as e:
         return {'success': False, 'error': str(e)}
+
+@app.route('/admin/user/<int:user_id>/lessons')
+@login_required
+def view_user_lessons(user_id):
+    if not current_user.is_admin:
+        abort(403)
+        
+    user = User.query.get_or_404(user_id)
+    
+    # Получаем все уроки
+    lessons = Lesson.query.order_by(Lesson.order_number).all()
+    
+    # Получаем прогресс пользователя
+    user_progress = UserProgress.query.filter_by(user_id=user_id).all()
+    completed_lesson_ids = [progress.lesson_id for progress in user_progress if progress.is_completed]
+    
+    # Рассчитываем прогресс
+    total_lessons = len(lessons)
+    completed_lessons = len(completed_lesson_ids)
+    progress_percentage = int((completed_lessons / total_lessons * 100)) if total_lessons > 0 else 0
+    
+    return render_template('user_lessons.html',
+                         user=user,
+                         lessons=lessons,
+                         completed_lesson_ids=completed_lesson_ids,
+                         progress_percentage=progress_percentage,
+                         completed_lessons=completed_lessons,
+                         total_lessons=total_lessons)
 
 if __name__ == '__main__':
     with app.app_context():
