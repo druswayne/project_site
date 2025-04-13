@@ -66,6 +66,7 @@
                         <h2 class="accordion-header" id="commentsHeading">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#commentsCollapse" aria-expanded="false" aria-controls="commentsCollapse">
                                 <i class="bi bi-chat-dots me-2"></i>Комментарии преподавателя
+                                <span class="badge bg-danger ms-2">{{ comments|length }}</span>
                             </button>
                         </h2>
                         <div id="commentsCollapse" class="accordion-collapse collapse" aria-labelledby="commentsHeading" data-bs-parent="#commentsAccordion">
