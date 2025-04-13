@@ -1461,4 +1461,4 @@ if __name__ == '__main__':
         db.create_all()
         # Создаем супер-админа, если его нет
         create_superadmin()
-    app.run(debug=True) 
+    app.run()
