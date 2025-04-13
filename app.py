@@ -1669,10 +1669,62 @@ def view_user_lessons(user_id):
                          completed_lessons=completed_lessons,
                          total_lessons=total_lessons)
 
+@app.route('/admin/user/<int:user_id>/lesson/<int:lesson_id>')
+@login_required
+def view_user_lesson_details(user_id, lesson_id):
+    if not current_user.is_admin:
+        abort(403)
+        
+    user = User.query.get_or_404(user_id)
+    lesson = Lesson.query.get_or_404(lesson_id)
+    
+    # Получаем прогресс пользователя по уроку
+    progress = UserProgress.query.filter_by(
+        user_id=user_id,
+        lesson_id=lesson_id
+    ).first()
+    
+    if not progress:
+        progress = UserProgress(
+            user_id=user_id,
+            lesson_id=lesson_id,
+            is_completed=False,
+            theory_completed=False,
+            test_completed=False,
+            practice_completed=False
+        )
+    
+    # Получаем результаты тестов
+    test = TheoryTest.query.filter_by(lesson_id=lesson_id).first()
+    test_results = []
+    if test:
+        test_results = TestResult.query.filter_by(
+            user_id=user_id,
+            test_id=test.id
+        ).order_by(TestResult.created_at.desc()).all()
+    
+    # Получаем практические задачи
+    practice_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id).all()
+    
+    # Получаем список решенных задач
+    solved_tasks = Solution.query.filter_by(
+        user_id=user_id,
+        is_correct=True
+    ).with_entities(Solution.task_id).all()
+    completed_task_ids = [task_id for (task_id,) in solved_tasks]
+    
+    return render_template('user_lesson_details.html',
+                         user=user,
+                         lesson=lesson,
+                         progress=progress,
+                         test_results=test_results,
+                         practice_tasks=practice_tasks,
+                         completed_task_ids=completed_task_ids)
+
 if __name__ == '__main__':
     with app.app_context():
         # Создаем таблицы, если они не существуют
         db.create_all()
         # Создаем супер-админа, если его нет
         create_superadmin()
-    app.run()
+    app.run(debug=True)
