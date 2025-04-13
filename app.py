@@ -1706,12 +1706,20 @@ def view_user_lesson_details(user_id, lesson_id):
     # Получаем практические задачи
     practice_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id).all()
     
-    # Получаем список решенных задач
+    # Получаем список решенных задач и их решения
     solved_tasks = Solution.query.filter_by(
         user_id=user_id,
         is_correct=True
     ).with_entities(Solution.task_id).all()
     completed_task_ids = [task_id for (task_id,) in solved_tasks]
+    
+    # Добавляем решения к задачам
+    for task in practice_tasks:
+        task.solutions = Solution.query.filter_by(
+            user_id=user_id,
+            task_id=task.id,
+            is_correct=True
+        ).order_by(Solution.created_at.desc()).all()
     
     return render_template('user_lesson_details.html',
                          user=user,
