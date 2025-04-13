@@ -314,7 +314,8 @@ def student_dashboard():
                          lessons=lesson_data,
                          progress_percentage=progress_percentage,
                          completed_lessons=completed_lessons,
-                         total_lessons=total_lessons)
+                         total_lessons=total_lessons,
+                         completed_lesson_ids=completed_lesson_ids)
 
 @app.route('/student/lesson/<int:lesson_id>')
 @login_required
