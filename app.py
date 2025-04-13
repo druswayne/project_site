@@ -374,11 +374,6 @@ def view_student_lesson(lesson_id):
     # Практика доступна только если тест пройден успешно
     practice_available = test_result is not None
     
-    # Если тест пройден успешно, обновляем статус practice_completed
-    if practice_available and not progress.practice_completed:
-        progress.practice_completed = True
-        db.session.commit()
-    
     # Рассчитываем прогресс по блокам
     total_blocks = 3  # теория, тест, практика
     completed_blocks = 0
@@ -388,8 +383,45 @@ def view_student_lesson(lesson_id):
         completed_blocks += 1
     if progress.test_completed:
         completed_blocks += 1
-    if progress.practice_completed:
-        completed_blocks += 1
+    
+    # Проверяем прогресс по практическим задачам
+    if practice_available:
+        # Получаем все обязательные задачи
+        mandatory_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id, is_required=True).all()
+        total_mandatory = len(mandatory_tasks)
+        
+        if total_mandatory > 0:
+            # Получаем все решенные задачи пользователя
+            solved_tasks = Solution.query.join(PracticeTask).filter(
+                Solution.user_id == current_user.id,
+                Solution.is_correct == True,
+                PracticeTask.lesson_id == lesson_id,
+                PracticeTask.is_required == True
+            ).with_entities(Solution.task_id).all()
+            
+            solved_task_ids = [task_id for (task_id,) in solved_tasks]
+            solved_mandatory = sum(1 for task in mandatory_tasks if task.id in solved_task_ids)
+            
+            # Если все обязательные задачи решены, считаем практику пройденной
+            if solved_mandatory == total_mandatory:
+                progress.practice_completed = True
+                completed_blocks += 1
+            else:
+                progress.practice_completed = False
+        else:
+            # Если нет обязательных задач, считаем практику пройденной
+            progress.practice_completed = True
+            completed_blocks += 1
+    
+    # Обновляем статус завершения урока
+    if completed_blocks == total_blocks:
+        progress.is_completed = True
+        progress.completed_at = datetime.now()
+    else:
+        progress.is_completed = False
+        progress.completed_at = None
+    
+    db.session.commit()
     
     progress_percentage = int((completed_blocks / total_blocks * 100))
     
@@ -1104,7 +1136,7 @@ def take_test(lesson_id):
                 progress.completed_at = datetime.now()
             flash('Поздравляем! Вы успешно прошли тест')
             db.session.commit()
-            return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
+            return redirect(url_for('view_practice_tasks', lesson_id=lesson_id))  # Перенаправляем на практические задачи
         else:
             flash(f'К сожалению, вы не прошли тест. Набрано баллов: {total_score}')
             db.session.commit()
@@ -1419,7 +1451,7 @@ def run_tests():
             )
             
             # Получаем результат
-            stdout, stderr = process.communicate()
+            stdout, stderr = process.communicate(timeout=5)
             
             # Проверяем результат
             is_correct = stdout.strip() == test.expected_output.strip()
@@ -1435,6 +1467,16 @@ def run_tests():
                 'error': error
             })
             
+        except subprocess.TimeoutExpired:
+            process.kill()
+            results.append({
+                'name': f'Тест {test.order_number}',
+                'passed': False,
+                'function': test.function,
+                'arguments': test.input_data,
+                'expected': test.expected_output,
+                'error': 'Превышено время выполнения теста'
+            })
         except Exception as e:
             results.append({
                 'name': f'Тест {test.order_number}',
