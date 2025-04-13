@@ -193,6 +193,14 @@ class Solution(db.Model):
     is_correct = db.Column(db.Boolean, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())
 
+class SolutionComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    solution_id = db.Column(db.Integer, db.ForeignKey('solution.id'), nullable=False)
+    admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -1728,6 +1736,34 @@ def view_user_lesson_details(user_id, lesson_id):
                          test_results=test_results,
                          practice_tasks=practice_tasks,
                          completed_task_ids=completed_task_ids)
+
+@app.route('/admin/solution/<int:solution_id>/comment', methods=['POST'])
+@login_required
+@admin_required
+def add_solution_comment(solution_id):
+    solution = Solution.query.get_or_404(solution_id)
+    task = PracticeTask.query.get_or_404(solution.task_id)
+    comment_text = request.form.get('comment')
+    
+    if not comment_text:
+        flash('Комментарий не может быть пустым', 'error')
+        return redirect(url_for('view_user_lesson_details', 
+                              user_id=solution.user_id, 
+                              lesson_id=task.lesson_id))
+    
+    comment = SolutionComment(
+        solution_id=solution_id,
+        admin_id=current_user.id,
+        comment=comment_text
+    )
+    
+    db.session.add(comment)
+    db.session.commit()
+    
+    flash('Комментарий добавлен', 'success')
+    return redirect(url_for('view_user_lesson_details', 
+                          user_id=solution.user_id, 
+                          lesson_id=task.lesson_id))
 
 if __name__ == '__main__':
     with app.app_context():

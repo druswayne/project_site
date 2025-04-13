@@ -28,11 +28,21 @@ class Solution(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     task_id = db.Column(db.Integer, db.ForeignKey('practice_task.id'), nullable=False)
     code = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_correct = db.Column(db.Boolean, default=False)
+    is_correct = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())
     
-    user = db.relationship('User', backref=db.backref('solutions', lazy=True))
     task = db.relationship('PracticeTask', backref=db.backref('solutions', lazy=True))
+    user = db.relationship('User', backref=db.backref('solutions', lazy=True))
 
     def __repr__(self):
-        return f'<Solution {self.id}>' 
+        return f'<Solution {self.id}>'
+
+class SolutionComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    solution_id = db.Column(db.Integer, db.ForeignKey('solution.id'), nullable=False)
+    admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    
+    solution = db.relationship('Solution', backref=db.backref('comments', lazy=True))
+    admin = db.relationship('User', backref=db.backref('solution_comments', lazy=True)) 

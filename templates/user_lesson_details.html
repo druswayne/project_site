@@ -148,7 +148,33 @@
                                         </h2>
                                         <div id="collapse{{ task.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ task.id }}" data-bs-parent="#solutionAccordion{{ task.id }}">
                                             <div class="accordion-body">
-                                                <pre class="bg-light p-3 rounded"><code style="color: #000000;">{{ task.solutions[-1].code }}</code></pre>
+                                                {% if task.solutions %}
+                                                    <pre class="bg-light p-3 rounded"><code style="color: #000000;">{{ task.solutions[0].code }}</code></pre>
+                                                    
+                                                    <!-- Комментарии к решению -->
+                                                    <div class="solution-comments mt-4">
+                                                        <h5>Комментарии преподавателя:</h5>
+                                                        {% for comment in task.solutions[0].comments %}
+                                                        <div class="comment mb-2 p-2 border rounded">
+                                                            <p class="mb-1">{{ comment.comment }}</p>
+                                                            <small class="text-muted">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                                        </div>
+                                                        {% endfor %}
+                                                        
+                                                        <!-- Форма добавления комментария -->
+                                                        <form action="{{ url_for('add_solution_comment', solution_id=task.solutions[0].id) }}" method="POST" class="mt-3">
+                                                            <div class="form-group">
+                                                                <label for="comment">Добавить комментарий:</label>
+                                                                <textarea name="comment" id="comment" class="form-control" rows="3" required></textarea>
+                                                            </div>
+                                                            <button type="submit" class="btn btn-primary mt-2">Отправить комментарий</button>
+                                                        </form>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="alert alert-warning">
+                                                        Решение не найдено
+                                                    </div>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
