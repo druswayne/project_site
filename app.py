@@ -30,6 +30,33 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
+class UserRating(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
+class UserProgress(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=False)
+    is_completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
+    # Связи с другими моделями
+    lesson = db.relationship('Lesson', backref=db.backref('user_progress', lazy=True))
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -40,6 +67,11 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
+    
+    # Связи с другими моделями
+    progress = db.relationship('UserProgress', backref='user', lazy=True)
+    ratings = db.relationship('UserRating', backref='user', lazy=True)
+    chat_messages = db.relationship('ChatMessage', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -144,7 +176,7 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('student_dashboard'))
         
     if request.method == 'POST':
         name = request.form.get('name')
@@ -185,7 +217,7 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('student_dashboard'))
         
     if request.method == 'POST':
         username = request.form.get('username')
@@ -206,7 +238,7 @@ def login():
         user.last_login = db.func.now()
         db.session.commit()
         
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('student_dashboard'))
         
     return render_template('login.html')
 
@@ -216,33 +248,90 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-@app.route('/dashboard')
+@app.route('/student/dashboard')
 @login_required
-def dashboard():
+def student_dashboard():
     # Получаем все уроки
     lessons = Lesson.query.order_by(Lesson.order_number).all()
     
-    # Для каждого урока проверяем, может ли пользователь его пройти
-    for lesson in lessons:
-        # Проверяем, есть ли у пользователя доступ к уроку
-        lesson.can_access = True  # По умолчанию доступ разрешен
-        
-        # Если урок требует прохождения предыдущего урока
-        if lesson.required_lesson_id:
-            # Проверяем, прошел ли пользователь предыдущий урок
-            required_lesson = Lesson.query.get(lesson.required_lesson_id)
-            if required_lesson:
-                # Проверяем, есть ли у пользователя прогресс по предыдущему уроку
-                lesson_progress = UserLessonProgress.query.filter_by(
-                    user_id=current_user.id,
-                    lesson_id=required_lesson.id
-                ).first()
-                
-                # Если нет прогресса или урок не пройден, запрещаем доступ
-                if not lesson_progress or not lesson_progress.is_completed:
-                    lesson.can_access = False
+    # Получаем прогресс пользователя
+    user_progress = UserProgress.query.filter_by(user_id=current_user.id).all()
+    completed_lesson_ids = [progress.lesson_id for progress in user_progress if progress.is_completed]
     
-    return render_template('dashboard.html', lessons=lessons)
+    # Подготавливаем данные для отображения
+    lesson_data = []
+    for i, lesson in enumerate(lessons):
+        # Первый урок всегда доступен
+        if i == 0:
+            can_access = True
+        else:
+            # Проверяем, пройден ли предыдущий урок
+            previous_lesson = lessons[i-1]
+            can_access = previous_lesson.id in completed_lesson_ids
+        
+        lesson_data.append({
+            'id': lesson.id,
+            'title': lesson.title,
+            'description': lesson.description,
+            'can_access': can_access,
+            'required_lesson_id': lesson.required_lesson_id if i > 0 else None
+        })
+    
+    # Рассчитываем прогресс
+    total_lessons = len(lessons)
+    completed_lessons = len(completed_lesson_ids)
+    progress_percentage = int((completed_lessons / total_lessons * 100)) if total_lessons > 0 else 0
+    
+    return render_template('student/dashboard.html',
+                         lessons=lesson_data,
+                         progress_percentage=progress_percentage,
+                         completed_lessons=completed_lessons,
+                         total_lessons=total_lessons)
+
+@app.route('/student/lesson/<int:lesson_id>')
+@login_required
+def view_student_lesson(lesson_id):
+    lesson = Lesson.query.get_or_404(lesson_id)
+    if not lesson.is_active:
+        flash('Этот урок не доступен')
+        return redirect(url_for('student_dashboard'))
+        
+    # Первый урок всегда доступен, если активен
+    if lesson.order_number == 1:
+        pass
+    else:
+        # Проверяем все предыдущие уроки
+        previous_lessons = Lesson.query.filter(
+            Lesson.order_number < lesson.order_number,
+            Lesson.is_active == True
+        ).order_by(Lesson.order_number).all()
+        
+        for prev_lesson in previous_lessons:
+            prev_progress = UserProgress.query.filter_by(
+                user_id=current_user.id,
+                lesson_id=prev_lesson.id
+            ).first()
+            
+            if not prev_progress or not prev_progress.is_completed:
+                flash(f'Сначала необходимо пройти урок "{prev_lesson.title}"')
+                return redirect(url_for('student_dashboard'))
+    
+    # Получаем прогресс пользователя по текущему уроку
+    progress = UserProgress.query.filter_by(
+        user_id=current_user.id,
+        lesson_id=lesson_id
+    ).first()
+    
+    if not progress:
+        progress = UserProgress(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            is_completed=False
+        )
+        db.session.add(progress)
+        db.session.commit()
+    
+    return render_template('student/lesson.html', lesson=lesson, progress=progress)
 
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""

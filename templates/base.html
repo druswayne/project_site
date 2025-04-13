@@ -807,7 +807,7 @@
                                 {{ current_user.username }}
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{{ url_for('dashboard') }}">Личный кабинет</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('student_dashboard') }}">Личный кабинет</a></li>
                                 {% if current_user.is_admin %}
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>

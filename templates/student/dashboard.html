@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Студенческая панель{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Студенческая панель</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <h2 class="mb-3">Доступные уроки</h2>
+            
+            {% if lessons %}
+                <div class="list-group">
+                    {% for lesson in lessons %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ lesson.title }}</h5>
+                                    <p class="mb-1">{{ lesson.description }}</p>
+                                    <small class="text-muted">
+                                        {% if lesson.required_lesson_id %}
+                                            Требуется пройти предыдущий урок
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div>
+                                    {% if lesson.can_access %}
+                                        <a href="{{ url_for('view_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                            Пройти урок
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-secondary" disabled>
+                                            Недоступно
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Пока нет доступных уроков. Ожидайте, пока администратор добавит новые уроки.
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Информация о пользователе</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Имя пользователя:</strong> {{ current_user.username }}</p>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    <p><strong>Роль:</strong> Студент</p>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Прогресс обучения</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%">
+                            {{ progress_percentage }}%
+                        </div>
+                    </div>
+                    <p class="mb-0">Пройдено уроков: {{ completed_lessons }}/{{ total_lessons }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
