@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, abort, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from dotenv import load_dotenv
@@ -26,6 +27,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -146,6 +148,7 @@ class PracticeTask(db.Model):
 class TestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=False)
     test_id = db.Column(db.Integer, db.ForeignKey('theory_test.id'), nullable=False)
     score = db.Column(db.Integer, nullable=False)
     is_passed = db.Column(db.Boolean, default=False)
@@ -157,6 +160,7 @@ class TestResult(db.Model):
 
     user = db.relationship('User', backref=db.backref('test_results', lazy=True))
     test = db.relationship('TheoryTest', backref=db.backref('results', lazy=True))
+    lesson = db.relationship('Lesson', backref=db.backref('test_results', lazy=True))
 
 class TaskTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -336,6 +340,15 @@ def view_student_lesson(lesson_id):
         db.session.add(progress)
         db.session.commit()
     
+    # Проверяем, пройден ли тест
+    test_result = TestResult.query.filter_by(
+        user_id=current_user.id,
+        lesson_id=lesson_id
+    ).first()
+    
+    # Практика доступна только если тест пройден успешно
+    practice_available = test_result and test_result.score >= test_result.test.required_score
+    
     # Рассчитываем прогресс по блокам
     total_blocks = 3  # теория, тест, практика
     completed_blocks = 0
@@ -355,7 +368,8 @@ def view_student_lesson(lesson_id):
                          progress=progress,
                          progress_percentage=progress_percentage,
                          completed_blocks=completed_blocks,
-                         total_blocks=total_blocks)
+                         total_blocks=total_blocks,
+                         practice_available=practice_available)
 
 @app.route('/student/lesson/<int:lesson_id>/theory')
 @login_required
@@ -941,7 +955,7 @@ def take_test(lesson_id):
     
     if not test:
         flash('Тест не найден или неактивен')
-        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+        return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
     
     # Проверяем, не проходил ли пользователь тест ранее
     previous_result = TestResult.query.filter_by(
@@ -951,12 +965,13 @@ def take_test(lesson_id):
     
     if previous_result and previous_result.is_passed:
         flash('Вы уже успешно прошли этот тест')
-        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+        return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
     
     if request.method == 'POST':
         # Создаем новую попытку прохождения теста
         result = TestResult(
             user_id=current_user.id,
+            lesson_id=lesson_id,
             test_id=test.id,
             started_at=datetime.now(),
             answers={}
@@ -984,14 +999,28 @@ def take_test(lesson_id):
         result.completed_at = datetime.now()
         
         db.session.add(result)
-        db.session.commit()
+        
+        # Обновляем прогресс пользователя
+        progress = UserProgress.query.filter_by(
+            user_id=current_user.id,
+            lesson_id=lesson_id
+        ).first()
+        
+        if not progress:
+            progress = UserProgress(
+                user_id=current_user.id,
+                lesson_id=lesson_id
+            )
+            db.session.add(progress)
         
         if result.is_passed:
+            progress.test_completed = True
             flash('Поздравляем! Вы успешно прошли тест')
         else:
             flash(f'К сожалению, вы не прошли тест. Набрано баллов: {total_score}')
         
-        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+        db.session.commit()
+        return redirect(url_for('test_results', lesson_id=lesson_id))
     
     return render_template('take_test.html', lesson=lesson, test=test)
 
@@ -1003,7 +1032,7 @@ def test_results(lesson_id):
     
     if not test:
         flash('Тест не найден')
-        return redirect(url_for('view_lesson', lesson_id=lesson_id))
+        return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
     
     results = TestResult.query.filter_by(
         user_id=current_user.id,
