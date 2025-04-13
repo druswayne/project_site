@@ -198,8 +198,11 @@ class SolutionComment(db.Model):
     solution_id = db.Column(db.Integer, db.ForeignKey('solution.id'), nullable=False)
     admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     comment = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Добавляем отношение к модели User
+    admin = db.relationship('User', backref=db.backref('solution_comments', lazy=True))
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1736,6 +1739,12 @@ def view_user_lesson_details(user_id, lesson_id):
             task_id=task.id,
             is_correct=True
         ).order_by(Solution.created_at.desc()).all()
+        
+        # Загружаем комментарии для каждого решения
+        for solution in task.solutions:
+            solution.comments = SolutionComment.query.filter_by(
+                solution_id=solution.id
+            ).order_by(SolutionComment.created_at.asc()).all()
     
     return render_template('user_lesson_details.html',
                          user=user,
