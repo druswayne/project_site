@@ -47,6 +47,30 @@
                     </table>
                 </div>
             </div>
+
+            {% for result in results %}
+                <div class="card mb-3">
+                    <div class="card-header {% if result.passed %}bg-success{% elif result.timeout %}bg-warning{% else %}bg-danger{% endif %} text-white">
+                        Тест {{ result.test_number }}
+                        {% if result.is_hidden %} (скрытый){% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Аргументы:</strong> {{ result.arguments }}</p>
+                        <p><strong>Ожидаемый результат:</strong> {{ result.expected }}</p>
+                        {% if result.timeout %}
+                            <div class="alert alert-warning">
+                                <strong>Превышено время выполнения!</strong> Программа выполнялась дольше 5 секунд.
+                            </div>
+                        {% elif result.error %}
+                            <div class="alert alert-danger">
+                                <strong>Ошибка:</strong> {{ result.error }}
+                            </div>
+                        {% else %}
+                            <p><strong>Полученный результат:</strong> {{ result.actual }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
         </div>
     </div>
 </div>

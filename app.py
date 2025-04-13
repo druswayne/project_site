@@ -1616,49 +1616,53 @@ def run_tests(code, task_id):
                 with open(test_file, 'w', encoding='utf-8') as f:
                     f.write(code + '\n\n' + test['test_code'])
                 
-                # Запускаем тест
+                # Запускаем тест с ограничением времени (5 секунд)
                 process = subprocess.Popen(
                     ['python', test_file],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True
                 )
-                stdout, stderr = process.communicate(timeout=5)
                 
-                # Проверяем результат
-                if process.returncode == 0:
-                    results.append({
-                        'name': test['name'],
-                        'passed': True,
-                        'function': test['function'],
-                        'arguments': test['arguments'],
-                        'expected': test['expected'],
-                        'actual': stdout.strip()
-                    })
-                else:
+                try:
+                    stdout, stderr = process.communicate(timeout=5)  # Ограничение в 5 секунд
+                    
+                    # Проверяем результат
+                    if process.returncode == 0:
+                        results.append({
+                            'name': test['name'],
+                            'passed': True,
+                            'function': test['function'],
+                            'arguments': test['arguments'],
+                            'expected': test['expected'],
+                            'actual': stdout.strip()
+                        })
+                    else:
+                        results.append({
+                            'name': test['name'],
+                            'passed': False,
+                            'function': test['function'],
+                            'arguments': test['arguments'],
+                            'expected': test['expected'],
+                            'actual': stdout.strip(),
+                            'error': stderr.strip()
+                        })
+                        
+                except subprocess.TimeoutExpired:
+                    process.kill()
                     results.append({
                         'name': test['name'],
                         'passed': False,
                         'function': test['function'],
                         'arguments': test['arguments'],
                         'expected': test['expected'],
-                        'actual': stdout.strip(),
-                        'error': stderr.strip()
+                        'error': 'Превышено время выполнения теста (5 секунд)',
+                        'timeout': True
                     })
                 
                 # Удаляем временный файл теста
                 os.remove(test_file)
                 
-            except subprocess.TimeoutExpired:
-                process.kill()
-                results.append({
-                    'name': test['name'],
-                    'passed': False,
-                    'function': test['function'],
-                    'arguments': test['arguments'],
-                    'expected': test['expected'],
-                    'error': 'Превышено время выполнения теста'
-                })
             except Exception as e:
                 results.append({
                     'name': test['name'],
@@ -1809,4 +1813,4 @@ if __name__ == '__main__':
         db.create_all()
         # Создаем супер-админа, если его нет
         create_superadmin()
-    app.run(debug=True)
+    app.run()
