@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, session
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
@@ -458,6 +458,13 @@ def complete_practice_task(lesson_id, task_id):
         flash('Задача отмечена как выполненная!', 'success')
     
     return redirect(url_for('view_practice_tasks', lesson_id=lesson_id))
+
+@app.route('/student/lesson/<int:lesson_id>/practice/task/<int:task_id>')
+@login_required
+def view_practice_task(lesson_id, task_id):
+    task = PracticeTask.query.get_or_404(task_id)
+    lesson = Lesson.query.get_or_404(lesson_id)
+    return render_template('student/practice_task.html', task=task, lesson=lesson)
 
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""
@@ -1327,6 +1334,122 @@ def delete_practice_task(task_id):
         flash(f'Ошибка при удалении задачи: {str(e)}', 'danger')
     
     return redirect(url_for('edit_practice_tasks', lesson_id=lesson_id))
+
+@app.route('/api/run-tests', methods=['POST'])
+@login_required
+def run_tests():
+    data = request.get_json()
+    code = data.get('code')
+    task_id = data.get('task_id')
+    
+    task = PracticeTask.query.get_or_404(task_id)
+    results = []
+    
+    for test in task.tests:
+        try:
+            # Создаем временный файл с кодом пользователя
+            with open('temp.py', 'w', encoding='utf-8') as f:
+                f.write(code)
+            
+            # Создаем строку для вызова функции с аргументами
+            function_call = f"print({test.function}({test.input_data}))"
+            
+            # Запускаем код с тестовыми данными
+            process = subprocess.Popen(
+                ['python', '-c', f"{code}\n{function_call}"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            # Получаем результат
+            stdout, stderr = process.communicate()
+            
+            # Проверяем результат
+            is_correct = stdout.strip() == test.expected_output.strip()
+            error = stderr if stderr else None
+            
+            results.append({
+                'name': f'Тест {test.order_number}',
+                'passed': is_correct,
+                'error': error
+            })
+            
+        except Exception as e:
+            results.append({
+                'name': f'Тест {test.order_number}',
+                'passed': False,
+                'error': str(e)
+            })
+        
+        finally:
+            # Удаляем временный файл
+            if os.path.exists('temp.py'):
+                os.remove('temp.py')
+    
+    return jsonify({'tests': results})
+
+@app.route('/api/submit-solution', methods=['POST'])
+@login_required
+def submit_solution():
+    data = request.get_json()
+    code = data.get('code')
+    task_id = data.get('task_id')
+    
+    task = PracticeTask.query.get_or_404(task_id)
+    lesson_id = task.lesson_id
+    
+    # Проверяем все тесты
+    all_tests_passed = True
+    for test in task.tests:
+        try:
+            with open('temp.py', 'w', encoding='utf-8') as f:
+                f.write(code)
+            
+            function_call = f"print({test.function}({test.input_data}))"
+            
+            process = subprocess.Popen(
+                ['python', '-c', f"{code}\n{function_call}"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            stdout, stderr = process.communicate()
+            
+            if stdout.strip() != test.expected_output.strip() or stderr:
+                all_tests_passed = False
+                break
+            
+        except Exception:
+            all_tests_passed = False
+            break
+        
+        finally:
+            if os.path.exists('temp.py'):
+                os.remove('temp.py')
+    
+    if all_tests_passed:
+        # Отмечаем задачу как выполненную
+        progress = UserProgress.query.filter_by(
+            user_id=current_user.id,
+            lesson_id=lesson_id
+        ).first()
+        
+        if not progress:
+            progress = UserProgress(
+                user_id=current_user.id,
+                lesson_id=lesson_id
+            )
+            db.session.add(progress)
+        
+        if task not in progress.completed_tasks:
+            progress.completed_tasks.append(task)
+            db.session.commit()
+        
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Не все тесты пройдены'})
 
 if __name__ == '__main__':
     with app.app_context():

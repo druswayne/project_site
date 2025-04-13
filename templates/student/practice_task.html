@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} - Практическая задача{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Описание задачи -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ task.title }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>Описание задачи:</h6>
+                        <p>{{ task.description }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Уровень сложности:</h6>
+                        <span class="badge {% if task.order_number <= 2 %}bg-success{% elif task.order_number <= 4 %}bg-warning{% else %}bg-danger{% endif %}">
+                            {% if task.order_number <= 2 %}Легкая
+                            {% elif task.order_number <= 4 %}Средняя
+                            {% else %}Сложная
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Тесты:</h6>
+                        <div id="test-results">
+                            <!-- Здесь будут отображаться результаты тестов -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Редактор кода -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Редактор кода</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="editor" style="height: 400px;">{{ task.initial_code }}</div>
+                </div>
+                <div class="card-footer">
+                    <button id="run-tests" class="btn btn-success">Проверить решение</button>
+                    <button id="submit-solution" class="btn btn-primary">Отправить решение</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Подключаем Ace Editor -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+<script>
+    // Инициализация редактора
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/python");
+    editor.setOptions({
+        fontSize: "14px",
+        enableBasicAutocompletion: true,
+        enableLiveAutocompletion: true
+    });
+
+    // Обработчик кнопки "Проверить решение"
+    document.getElementById('run-tests').addEventListener('click', function() {
+        const code = editor.getValue();
+        // Здесь будет код для отправки решения на сервер и получения результатов тестов
+        fetch('/api/run-tests', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                code: code,
+                task_id: {{ task.id }}
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Отображаем результаты тестов
+            const testResults = document.getElementById('test-results');
+            testResults.innerHTML = '';
+            data.tests.forEach(test => {
+                const testElement = document.createElement('div');
+                testElement.className = `alert ${test.passed ? 'alert-success' : 'alert-danger'}`;
+                testElement.textContent = test.name + ': ' + (test.passed ? 'Пройден' : 'Не пройден');
+                testResults.appendChild(testElement);
+            });
+        });
+    });
+
+    // Обработчик кнопки "Отправить решение"
+    document.getElementById('submit-solution').addEventListener('click', function() {
+        const code = editor.getValue();
+        // Здесь будет код для отправки решения на сервер
+        fetch('/api/submit-solution', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                code: code,
+                task_id: {{ task.id }}
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = "{{ url_for('view_practice_tasks', lesson_id=lesson.id) }}";
+            }
+        });
+    });
+</script>
+{% endblock %} 
