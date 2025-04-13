@@ -1,55 +1,121 @@
 {% extends "base.html" %}
 
-{% block title %}{{ lesson.title }} - Практика{% endblock %}
+{% block title %}Практические задачи: {{ lesson.title }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">{{ lesson.title }}</h1>
+    <h1 class="mb-4">Практические задачи: {{ lesson.title }}</h1>
     
     <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Практические задания</h5>
+        <!-- Обязательные задачи -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Обязательные задачи</h5>
                 </div>
                 <div class="card-body">
-                    {% if practice_tasks %}
-                        <div class="list-group">
-                            {% for task in practice_tasks %}
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h5 class="mb-1">{{ task.title }}</h5>
-                                            <p class="mb-1">{{ task.description }}</p>
+                    {% for task in mandatory_tasks %}
+                        <div class="card mb-3 {% if task.id in completed_task_ids %}border-success{% endif %}">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        {{ task.title }}
+                                        {% if task.id in completed_task_ids %}
+                                            <span class="badge bg-success">Выполнено</span>
+                                        {% endif %}
+                                    </h5>
+                                    <span class="badge {% if task.order_number <= 2 %}bg-success{% elif task.order_number <= 4 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {% if task.order_number <= 2 %}Легкая
+                                        {% elif task.order_number <= 4 %}Средняя
+                                        {% else %}Сложная
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="accordion" id="accordion{{ task.id }}">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ task.id }}">
+                                                Описание задачи
+                                            </button>
+                                        </h2>
+                                        <div id="collapse{{ task.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ task.id }}">
+                                            <div class="accordion-body">
+                                                {{ task.description }}
+                                            </div>
                                         </div>
-                                        <a href="{{ url_for('solve_task', task_id=task.id) }}" class="btn btn-primary">
-                                            Решить задачу
-                                        </a>
                                     </div>
                                 </div>
-                            {% endfor %}
+                                {% if task.id not in completed_task_ids %}
+                                    <form action="{{ url_for('complete_practice_task', lesson_id=lesson.id, task_id=task.id) }}" method="POST" class="mt-3">
+                                        <button type="submit" class="btn btn-success">Отметить как выполненную</button>
+                                    </form>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% else %}
-                        <div class="alert alert-info">
-                            Пока нет практических заданий для этого урока.
-                        </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
             </div>
         </div>
         
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Навигация</h5>
+        <!-- Дополнительные задачи -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Дополнительные задачи</h5>
                 </div>
                 <div class="card-body">
-                    <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">
-                        Вернуться к уроку
-                    </a>
+                    {% for task in optional_tasks %}
+                        <div class="card mb-3 {% if task.id in completed_task_ids %}border-success{% endif %}">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        {{ task.title }}
+                                        {% if task.id in completed_task_ids %}
+                                            <span class="badge bg-success">Выполнено</span>
+                                        {% endif %}
+                                    </h5>
+                                    <span class="badge {% if task.order_number <= 2 %}bg-success{% elif task.order_number <= 4 %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {% if task.order_number <= 2 %}Легкая
+                                        {% elif task.order_number <= 4 %}Средняя
+                                        {% else %}Сложная
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="accordion" id="accordion{{ task.id }}">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ task.id }}">
+                                                Описание задачи
+                                            </button>
+                                        </h2>
+                                        <div id="collapse{{ task.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion{{ task.id }}">
+                                            <div class="accordion-body">
+                                                {{ task.description }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if task.id not in completed_task_ids %}
+                                    <form action="{{ url_for('complete_practice_task', lesson_id=lesson.id, task_id=task.id) }}" method="POST" class="mt-3">
+                                        <button type="submit" class="btn btn-success">Отметить как выполненную</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
+    </div>
+    
+    <div class="text-center mt-4">
+        <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary">
+            Вернуться к уроку
+        </a>
     </div>
 </div>
 {% endblock %} 

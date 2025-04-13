@@ -63,6 +63,15 @@ class UserProgress(db.Model):
     
     # Связи с другими моделями
     lesson = db.relationship('Lesson', backref=db.backref('user_progress', lazy=True))
+    completed_tasks = db.relationship('PracticeTask', secondary='user_completed_tasks',
+                                    backref=db.backref('completed_by', lazy=True))
+
+# Таблица для связи многие-ко-многим между UserProgress и PracticeTask
+user_completed_tasks = db.Table('user_completed_tasks',
+    db.Column('progress_id', db.Integer, db.ForeignKey('user_progress.id'), primary_key=True),
+    db.Column('task_id', db.Integer, db.ForeignKey('practice_task.id'), primary_key=True),
+    db.Column('completed_at', db.DateTime, default=db.func.now())
+)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -414,35 +423,41 @@ def view_lesson_theory(lesson_id):
 
 @app.route('/student/lesson/<int:lesson_id>/practice')
 @login_required
-def view_lesson_practice(lesson_id):
+def view_practice_tasks(lesson_id):
     lesson = Lesson.query.get_or_404(lesson_id)
-    if not lesson.is_active:
-        flash('Этот урок не доступен')
-        return redirect(url_for('student_dashboard'))
+    progress = UserProgress.query.filter_by(user_id=current_user.id, lesson_id=lesson_id).first()
     
-    # Получаем прогресс пользователя
+    if not progress:
+        progress = UserProgress(user_id=current_user.id, lesson_id=lesson_id)
+        db.session.add(progress)
+        db.session.commit()
+    
+    completed_task_ids = [task.id for task in progress.completed_tasks]
+    mandatory_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id, is_required=True).order_by(PracticeTask.order_number).all()
+    optional_tasks = PracticeTask.query.filter_by(lesson_id=lesson_id, is_required=False).order_by(PracticeTask.order_number).all()
+    
+    return render_template('student/practice.html',
+                         lesson=lesson,
+                         mandatory_tasks=mandatory_tasks,
+                         optional_tasks=optional_tasks,
+                         completed_task_ids=completed_task_ids)
+
+@app.route('/student/lesson/<int:lesson_id>/practice/task/<int:task_id>/complete', methods=['POST'])
+@login_required
+def complete_practice_task(lesson_id, task_id):
     progress = UserProgress.query.filter_by(
         user_id=current_user.id,
         lesson_id=lesson_id
-    ).first()
+    ).first_or_404()
     
-    if not progress:
-        progress = UserProgress(
-            user_id=current_user.id,
-            lesson_id=lesson_id,
-            is_completed=False
-        )
-        db.session.add(progress)
+    task = PracticeTask.query.get_or_404(task_id)
     
-    # Получаем практические задания
-    practice_tasks = PracticeTask.query.filter_by(
-        lesson_id=lesson_id
-    ).order_by(PracticeTask.order_number).all()
+    if task not in progress.completed_tasks:
+        progress.completed_tasks.append(task)
+        db.session.commit()
+        flash('Задача отмечена как выполненная!', 'success')
     
-    return render_template('student/practice.html', 
-                         lesson=lesson, 
-                         progress=progress,
-                         practice_tasks=practice_tasks)
+    return redirect(url_for('view_practice_tasks', lesson_id=lesson_id))
 
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""

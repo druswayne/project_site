@@ -54,9 +54,7 @@
                             <h5 class="card-title">Практика</h5>
                             <p class="card-text">Выполните практические задания</p>
                             {% if practice_available %}
-                                <a href="{{ url_for('view_lesson_practice', lesson_id=lesson.id) }}" class="btn btn-primary">
-                                    Перейти к практике
-                                </a>
+                                <a href="{{ url_for('view_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary">Практические задачи</a>
                             {% else %}
                                 <button class="btn btn-secondary" disabled>
                                     Сначала пройдите тест
