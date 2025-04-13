@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lesson.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">{{ lesson.title }}</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <p class="card-text">{{ lesson.description }}</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Блок теории -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Теория</h5>
+                            <p class="card-text">Изучите теоретический материал урока</p>
+                            <a href="{{ url_for('view_lesson_theory', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                Перейти к теории
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Блок теста -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Тест по теории</h5>
+                            <p class="card-text">Проверьте свои знания по теории</p>
+                            {% if lesson.theory_test %}
+                                <a href="{{ url_for('take_test', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                    Пройти тест
+                                </a>
+                            {% else %}
+                                <button class="btn btn-secondary" disabled>
+                                    Тест не доступен
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Блок практики -->
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Практика</h5>
+                            <p class="card-text">Выполните практические задания</p>
+                            {% if lesson.practice_tasks %}
+                                <a href="{{ url_for('view_lesson_practice', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                    Перейти к практике
+                                </a>
+                            {% else %}
+                                <button class="btn btn-secondary" disabled>
+                                    Практика не доступна
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Прогресс урока</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%">
+                            {{ progress_percentage }}%
+                        </div>
+                    </div>
+                    <p class="mb-0">Пройдено блоков: {{ completed_blocks }}/{{ total_blocks }}</p>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Навигация</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary">
+                        Вернуться к списку уроков
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

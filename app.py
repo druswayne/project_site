@@ -53,7 +53,12 @@ class UserProgress(db.Model):
     completed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
-
+    
+    # Поля для отслеживания прогресса по блокам
+    theory_completed = db.Column(db.Boolean, default=False)
+    test_completed = db.Column(db.Boolean, default=False)
+    practice_completed = db.Column(db.Boolean, default=False)
+    
     # Связи с другими моделями
     lesson = db.relationship('Lesson', backref=db.backref('user_progress', lazy=True))
 
@@ -331,7 +336,84 @@ def view_student_lesson(lesson_id):
         db.session.add(progress)
         db.session.commit()
     
-    return render_template('student/lesson.html', lesson=lesson, progress=progress)
+    # Рассчитываем прогресс по блокам
+    total_blocks = 3  # теория, тест, практика
+    completed_blocks = 0
+    
+    # Проверяем прогресс по каждому блоку
+    if progress.theory_completed:
+        completed_blocks += 1
+    if progress.test_completed:
+        completed_blocks += 1
+    if progress.practice_completed:
+        completed_blocks += 1
+    
+    progress_percentage = int((completed_blocks / total_blocks * 100))
+    
+    return render_template('student/lesson.html',
+                         lesson=lesson,
+                         progress=progress,
+                         progress_percentage=progress_percentage,
+                         completed_blocks=completed_blocks,
+                         total_blocks=total_blocks)
+
+@app.route('/student/lesson/<int:lesson_id>/theory')
+@login_required
+def view_lesson_theory(lesson_id):
+    lesson = Lesson.query.get_or_404(lesson_id)
+    if not lesson.is_active:
+        flash('Этот урок не доступен')
+        return redirect(url_for('student_dashboard'))
+    
+    # Получаем прогресс пользователя
+    progress = UserProgress.query.filter_by(
+        user_id=current_user.id,
+        lesson_id=lesson_id
+    ).first()
+    
+    if not progress:
+        progress = UserProgress(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            is_completed=False
+        )
+        db.session.add(progress)
+        db.session.commit()
+    
+    return render_template('student/theory.html', lesson=lesson, progress=progress)
+
+@app.route('/student/lesson/<int:lesson_id>/practice')
+@login_required
+def view_lesson_practice(lesson_id):
+    lesson = Lesson.query.get_or_404(lesson_id)
+    if not lesson.is_active:
+        flash('Этот урок не доступен')
+        return redirect(url_for('student_dashboard'))
+    
+    # Получаем прогресс пользователя
+    progress = UserProgress.query.filter_by(
+        user_id=current_user.id,
+        lesson_id=lesson_id
+    ).first()
+    
+    if not progress:
+        progress = UserProgress(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            is_completed=False
+        )
+        db.session.add(progress)
+        db.session.commit()
+    
+    # Получаем практические задания
+    practice_tasks = PracticeTask.query.filter_by(
+        lesson_id=lesson_id
+    ).order_by(PracticeTask.order_number).all()
+    
+    return render_template('student/practice.html', 
+                         lesson=lesson, 
+                         progress=progress,
+                         practice_tasks=practice_tasks)
 
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""
