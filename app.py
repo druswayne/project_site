@@ -637,20 +637,41 @@ def toggle_user_status(user_id):
     flash(f'Пользователь {user.username} {status}', 'success')
     return redirect(url_for('user_list'))
 
-@app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @login_required
+@admin_required
 def delete_user(user_id):
-    if not current_user.is_admin:
-        abort(403)
-        
     user = User.query.get_or_404(user_id)
-    if user.is_admin:
-        flash('Нельзя удалить администратора', 'danger')
-        return redirect(url_for('user_list'))
-        
+    
+    # Удаляем все связанные данные пользователя
+    # 1. Удаляем прогресс по урокам
+    UserProgress.query.filter_by(user_id=user_id).delete()
+    
+    # 2. Удаляем результаты тестов
+    TestResult.query.filter_by(user_id=user_id).delete()
+    
+    # 3. Удаляем решения практических задач и связанные комментарии
+    solutions = Solution.query.filter_by(user_id=user_id).all()
+    for solution in solutions:
+        # Удаляем комментарии к решению
+        SolutionComment.query.filter_by(solution_id=solution.id).delete()
+        # Удаляем само решение
+        db.session.delete(solution)
+    
+    # 4. Удаляем комментарии, оставленные пользователем (если он был администратором)
+    SolutionComment.query.filter_by(admin_id=user_id).delete()
+    
+    # 5. Удаляем самого пользователя
     db.session.delete(user)
-    db.session.commit()
-    flash(f'Пользователь {user.username} удален', 'success')
+    
+    try:
+        db.session.commit()
+        flash('Пользователь и все связанные с ним данные успешно удалены.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Произошла ошибка при удалении пользователя.', 'danger')
+        app.logger.error(f'Ошибка при удалении пользователя {user_id}: {str(e)}')
+    
     return redirect(url_for('user_list'))
 
 @app.route('/admin/users')
