@@ -53,7 +53,6 @@
                 </div>
                 <div class="card-body">
                     <p><strong>Имя пользователя:</strong> {{ current_user.username }}</p>
-                    <p><strong>Email:</strong> {{ current_user.email }}</p>
                     <p><strong>Роль:</strong> {{ 'Администратор' if current_user.is_admin else 'Студент' }}</p>
                 </div>
             </div>
