@@ -343,13 +343,22 @@ def view_student_lesson(lesson_id):
     test = TheoryTest.query.filter_by(lesson_id=lesson_id, is_active=True).first()
     test_result = None
     if test:
-        test_result = TestResult.query.filter_by(
+        # Получаем все попытки прохождения теста
+        test_results = TestResult.query.filter_by(
             user_id=current_user.id,
             test_id=test.id
-        ).first()
+        ).order_by(TestResult.created_at.desc()).all()
+        
+        # Проверяем, есть ли успешная попытка
+        test_result = next((result for result in test_results if result.is_passed), None)
     
     # Практика доступна только если тест пройден успешно
-    practice_available = test_result and test_result.is_passed
+    practice_available = test_result is not None
+    
+    # Если тест пройден успешно, обновляем статус practice_completed
+    if practice_available and not progress.practice_completed:
+        progress.practice_completed = True
+        db.session.commit()
     
     # Рассчитываем прогресс по блокам
     total_blocks = 3  # теория, тест, практика
