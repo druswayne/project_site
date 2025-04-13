@@ -1,0 +1,14 @@
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">{{ solution.task.title }}</h5>
+        <pre class="bg-light p-3"><code>{{ solution.code }}</code></pre>
+        <p class="card-text">
+            <small class="text-muted">
+                Статус: {% if solution.is_correct %}Правильно{% else %}Неправильно{% endif %}
+            </small>
+        </p>
+        <a href="{{ url_for('view_solution_comments', solution_id=solution.id) }}" class="btn btn-info btn-sm">
+            Комментарии ({{ solution.comments|length }})
+        </a>
+    </div>
+</div> 

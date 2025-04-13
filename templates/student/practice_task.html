@@ -57,6 +57,23 @@
                     <a href="{{ url_for('view_practice_tasks', lesson_id=task.lesson_id) }}" class="btn btn-primary px-4 py-2">Назад</a>
                 </div>
             </div>
+
+            <div class="mb-4">
+                <!-- Комментарии преподавателя -->
+                {% if comments %}
+                <div class="mt-4">
+                    <h5>Комментарии преподавателя:</h5>
+                    {% for comment in comments %}
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <p class="card-text">{{ comment.comment }}</p>
+                            <small class="text-muted">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>

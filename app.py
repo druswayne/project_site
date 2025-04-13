@@ -539,13 +539,21 @@ def view_practice_task(lesson_id, task_id):
         task_id=task_id
     ).order_by(Solution.created_at.desc()).first()
     
+    # Получаем комментарии к последнему решению
+    comments = []
+    if last_solution:
+        comments = SolutionComment.query.filter_by(
+            solution_id=last_solution.id
+        ).order_by(SolutionComment.created_at.desc()).all()
+    
     # Используем код последнего решения или начальный код задачи
     initial_code = last_solution.code if last_solution else task.initial_code
     
     return render_template('student/practice_task.html', 
                          task=task, 
                          lesson=lesson,
-                         user_code=initial_code)
+                         user_code=initial_code,
+                         comments=comments)
 
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""

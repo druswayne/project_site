@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Комментарии к решению задачи</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Решение пользователя {{ solution.user.username }}</h5>
+            <h6 class="card-subtitle mb-2 text-muted">Задача: {{ solution.task.title }}</h6>
+            <pre class="bg-light p-3"><code>{{ solution.code }}</code></pre>
+        </div>
+    </div>
+
+    <h3>Комментарии</h3>
+    {% for comment in comments %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">
+                Администратор: {{ comment.admin.username }}
+                <small class="text-muted">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </h6>
+            <p class="card-text">{{ comment.comment }}</p>
+        </div>
+    </div>
+    {% else %}
+    <p>Комментариев пока нет</p>
+    {% endfor %}
+
+    <form method="POST" action="{{ url_for('add_solution_comment', solution_id=solution.id) }}" class="mt-4">
+        <div class="form-group">
+            <label for="comment">Добавить комментарий</label>
+            <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Отправить</button>
+    </form>
+</div>
+{% endblock %} 
