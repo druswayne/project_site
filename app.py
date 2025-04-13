@@ -185,6 +185,14 @@ class TaskTest(db.Model):
     def __repr__(self):
         return f'<TaskTest {self.id}>'
 
+class Solution(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('practice_task.id'), nullable=False)
+    code = db.Column(db.Text, nullable=False)
+    is_correct = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -466,7 +474,20 @@ def complete_practice_task(lesson_id, task_id):
 def view_practice_task(lesson_id, task_id):
     task = PracticeTask.query.get_or_404(task_id)
     lesson = Lesson.query.get_or_404(lesson_id)
-    return render_template('student/practice_task.html', task=task, lesson=lesson)
+    
+    # Получаем последнее решение пользователя для этой задачи
+    last_solution = Solution.query.filter_by(
+        user_id=current_user.id,
+        task_id=task_id
+    ).order_by(Solution.created_at.desc()).first()
+    
+    # Используем код последнего решения или начальный код задачи
+    initial_code = last_solution.code if last_solution else task.initial_code
+    
+    return render_template('student/practice_task.html', 
+                         task=task, 
+                         lesson=lesson,
+                         user_code=initial_code)
 
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""
@@ -1253,6 +1274,12 @@ def next_line(content, current_line):
 def solve_task(task_id):
     task = PracticeTask.query.get_or_404(task_id)
     
+    # Получаем последнее решение пользователя для этой задачи
+    last_solution = Solution.query.filter_by(
+        user_id=current_user.id,
+        task_id=task_id
+    ).order_by(Solution.created_at.desc()).first()
+    
     if request.method == 'POST':
         user_code = request.form.get('code')
         results = []
@@ -1264,7 +1291,7 @@ def solve_task(task_id):
                     f.write(user_code)
                 
                 # Создаем строку для вызова функции с аргументами
-                function_call = f"print({test.function}({test.input_data}))"
+                function_call = f"print({task.function_name}({test.input_data}))"
                 
                 # Запускаем код с тестовыми данными
                 process = subprocess.Popen(
@@ -1283,7 +1310,6 @@ def solve_task(task_id):
                 
                 results.append({
                     'test_number': test.order_number,
-                    'function': test.function,
                     'arguments': test.input_data,
                     'expected': test.expected_output,
                     'actual': stdout.strip(),
@@ -1295,7 +1321,6 @@ def solve_task(task_id):
             except Exception as e:
                 results.append({
                     'test_number': test.order_number,
-                    'function': test.function,
                     'arguments': test.input_data,
                     'expected': test.expected_output,
                     'actual': None,
@@ -1312,13 +1337,25 @@ def solve_task(task_id):
         # Проверяем, все ли тесты пройдены
         all_tests_passed = all(r['is_correct'] for r in results)
         
+        # Сохраняем решение
+        solution = Solution(
+            user_id=current_user.id,
+            task_id=task_id,
+            code=user_code,
+            is_correct=all_tests_passed
+        )
+        db.session.add(solution)
+        db.session.commit()
+        
         return render_template('solve_task.html', 
                              task=task, 
                              results=results,
                              all_tests_passed=all_tests_passed,
                              user_code=user_code)
     
-    return render_template('solve_task.html', task=task)
+    # Для GET запроса показываем последнее решение или начальный код
+    initial_code = last_solution.code if last_solution else task.initial_code
+    return render_template('solve_task.html', task=task, user_code=initial_code)
 
 @app.route('/admin/practice-tasks/<int:task_id>/delete', methods=['POST'])
 @login_required
@@ -1385,6 +1422,9 @@ def run_tests():
             results.append({
                 'name': f'Тест {test.order_number}',
                 'passed': False,
+                'function': test.function,
+                'arguments': test.input_data,
+                'expected': test.expected_output,
                 'error': str(e)
             })
         
@@ -1412,7 +1452,7 @@ def submit_solution():
             with open('temp.py', 'w', encoding='utf-8') as f:
                 f.write(code)
             
-            function_call = f"print({test.function}({test.input_data}))"
+            function_call = f"print({task.function_name}({test.input_data}))"
             
             process = subprocess.Popen(
                 ['python', '-c', f"{code}\n{function_call}"],
@@ -1426,36 +1466,22 @@ def submit_solution():
             if stdout.strip() != test.expected_output.strip() or stderr:
                 all_tests_passed = False
                 break
-            
-        except Exception:
-            all_tests_passed = False
-            break
-        
+                
         finally:
             if os.path.exists('temp.py'):
                 os.remove('temp.py')
     
-    if all_tests_passed:
-        # Отмечаем задачу как выполненную
-        progress = UserProgress.query.filter_by(
-            user_id=current_user.id,
-            lesson_id=lesson_id
-        ).first()
-        
-        if not progress:
-            progress = UserProgress(
-                user_id=current_user.id,
-                lesson_id=lesson_id
-            )
-            db.session.add(progress)
-        
-        if task not in progress.completed_tasks:
-            progress.completed_tasks.append(task)
-            db.session.commit()
-        
-        return jsonify({'success': True})
-    else:
-        return jsonify({'success': False, 'message': 'Не все тесты пройдены'})
+    # Сохраняем решение
+    solution = Solution(
+        user_id=current_user.id,
+        task_id=task_id,
+        code=code,
+        is_correct=all_tests_passed
+    )
+    db.session.add(solution)
+    db.session.commit()
+    
+    return jsonify({'success': True})
 
 def run_tests(code, task_id):
     try:
