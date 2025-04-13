@@ -47,11 +47,9 @@
                                         </div>
                                     </div>
                                 </div>
-                                {% if task.id not in completed_task_ids %}
-                                    <a href="{{ url_for('view_practice_task', lesson_id=lesson.id, task_id=task.id) }}" class="btn btn-primary mt-3">
-                                        Перейти к задаче
-                                    </a>
-                                {% endif %}
+                                <a href="{{ url_for('view_practice_task', lesson_id=lesson.id, task_id=task.id) }}" class="btn btn-primary mt-3">
+                                    Перейти к задаче
+                                </a>
                             </div>
                         </div>
                     {% endfor %}
@@ -99,11 +97,9 @@
                                         </div>
                                     </div>
                                 </div>
-                                {% if task.id not in completed_task_ids %}
-                                    <a href="{{ url_for('view_practice_task', lesson_id=lesson.id, task_id=task.id) }}" class="btn btn-primary mt-3">
-                                        Перейти к задаче
-                                    </a>
-                                {% endif %}
+                                <a href="{{ url_for('view_practice_task', lesson_id=lesson.id, task_id=task.id) }}" class="btn btn-primary mt-3">
+                                    Перейти к задаче
+                                </a>
                             </div>
                         </div>
                     {% endfor %}
