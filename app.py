@@ -4,6 +4,8 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import signal
+import shutil
 from dotenv import load_dotenv
 from datetime import datetime
 import secrets
@@ -15,6 +17,55 @@ import tempfile
 import psutil
 
 load_dotenv()
+
+# Список запрещенных модулей и функций
+FORBIDDEN_IMPORTS = {
+    'os', 'sys', 'subprocess', 'shutil', 'socket', 'requests',
+    'urllib', 'http', 'ftp', 'telnetlib', 'smtplib', 
+    'paramiko', 'pickle', 'shelve', 'glob', 'webbrowser'
+}
+
+FORBIDDEN_FUNCTIONS = {
+    'eval', 'exec', 'compile', '__import__', 'open', 
+    'input', 'raw_input', 'breakpoint', 'globals', 'locals'
+}
+
+def check_code_safety(code):
+    """Проверяет код на наличие потенциально опасных конструкций"""
+    import ast
+    
+    try:
+        # Парсим код в AST
+        tree = ast.parse(code)
+        
+        # Проверяем импорты и вызовы функций
+        for node in ast.walk(tree):
+            # Проверка импортов
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                for name in node.names:
+                    module = name.name.split('.')[0]
+                    if module in FORBIDDEN_IMPORTS:
+                        return False, f"Использование модуля '{module}' запрещено"
+            
+            # Проверка вызовов функций
+            elif isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name):
+                    if node.func.id in FORBIDDEN_FUNCTIONS:
+                        return False, f"Использование функции '{node.func.id}' запрещено"
+                elif isinstance(node.func, ast.Attribute):
+                    if node.func.attr in FORBIDDEN_FUNCTIONS:
+                        return False, f"Использование функции '{node.func.attr}' запрещено"
+        
+        # Проверяем общий размер кода
+        if len(code) > 10000:  # Ограничение в 10KB
+            return False, "Код превышает максимально допустимый размер"
+            
+        return True, "Код безопасен"
+        
+    except SyntaxError:
+        return False, "Синтаксическая ошибка в коде"
+    except Exception as e:
+        return False, f"Ошибка при проверке кода: {str(e)}"
 
 def admin_required(f):
     @wraps(f)
@@ -1500,7 +1551,7 @@ def run_tests():
             )
             
             # Получаем результат
-            stdout, stderr = process.communicate(timeout=5)
+            stdout, stderr = process.communicate(timeout=5)  # 5 секунд
             
             # Проверяем результат
             is_correct = stdout.strip() == test.expected_output.strip()
@@ -1637,7 +1688,7 @@ def run_tests(code, task_id):
                             
                             if memory_usage > memory_limit:
                                 memory_exceeded = True
-                                process.kill()
+                                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                                 break
                         except (psutil.NoSuchProcess, psutil.AccessDenied):
                             break
@@ -1654,7 +1705,7 @@ def run_tests(code, task_id):
                         })
                         continue
                     
-                    stdout, stderr = process.communicate(timeout=5)  # Ограничение в 5 секунд
+                    stdout, stderr = process.communicate(timeout=5)  # 5 секунд
                     
                     # Проверяем результат
                     if process.returncode == 0:
