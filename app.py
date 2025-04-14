@@ -12,6 +12,7 @@ from functools import wraps
 import subprocess
 import uuid
 import tempfile
+import psutil
 
 load_dotenv()
 
@@ -1616,7 +1617,7 @@ def run_tests(code, task_id):
                 with open(test_file, 'w', encoding='utf-8') as f:
                     f.write(code + '\n\n' + test['test_code'])
                 
-                # Запускаем тест с ограничением времени (5 секунд)
+                # Запускаем тест с ограничением времени (5 секунд) и памяти (1 МБ)
                 process = subprocess.Popen(
                     ['python', test_file],
                     stdout=subprocess.PIPE,
@@ -1625,6 +1626,34 @@ def run_tests(code, task_id):
                 )
                 
                 try:
+                    # Мониторинг использования памяти
+                    memory_limit = 1024 * 1024  # 1 МБ в байтах
+                    memory_exceeded = False
+                    
+                    while process.poll() is None:
+                        try:
+                            process_info = psutil.Process(process.pid)
+                            memory_usage = process_info.memory_info().rss
+                            
+                            if memory_usage > memory_limit:
+                                memory_exceeded = True
+                                process.kill()
+                                break
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            break
+                    
+                    if memory_exceeded:
+                        results.append({
+                            'name': test['name'],
+                            'passed': False,
+                            'function': test['function'],
+                            'arguments': test['arguments'],
+                            'expected': test['expected'],
+                            'error': 'Превышен лимит памяти (1 МБ)',
+                            'memory_exceeded': True
+                        })
+                        continue
+                    
                     stdout, stderr = process.communicate(timeout=5)  # Ограничение в 5 секунд
                     
                     # Проверяем результат

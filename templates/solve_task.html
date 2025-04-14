@@ -50,7 +50,7 @@
 
             {% for result in results %}
                 <div class="card mb-3">
-                    <div class="card-header {% if result.passed %}bg-success{% elif result.timeout %}bg-warning{% else %}bg-danger{% endif %} text-white">
+                    <div class="card-header {% if result.passed %}bg-success{% elif result.timeout %}bg-warning{% elif result.memory_exceeded %}bg-danger{% else %}bg-danger{% endif %} text-white">
                         Тест {{ result.test_number }}
                         {% if result.is_hidden %} (скрытый){% endif %}
                     </div>
@@ -60,6 +60,10 @@
                         {% if result.timeout %}
                             <div class="alert alert-warning">
                                 <strong>Превышено время выполнения!</strong> Программа выполнялась дольше 5 секунд.
+                            </div>
+                        {% elif result.memory_exceeded %}
+                            <div class="alert alert-danger">
+                                <strong>Превышен лимит памяти!</strong> Программа использовала более 1 МБ памяти.
                             </div>
                         {% elif result.error %}
                             <div class="alert alert-danger">
