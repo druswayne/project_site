@@ -199,14 +199,14 @@ class TestQuestion(db.Model):
 
 class PracticeTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=False)
+    lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id', ondelete='CASCADE'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
     function_name = db.Column(db.String(200), nullable=False)  # Название функции
     initial_code = db.Column(db.Text)  # Начальный код для задачи
     order_number = db.Column(db.Integer, nullable=False)
     is_required = db.Column(db.Boolean, default=False)
-    tests = db.relationship('TaskTest', backref='task', lazy=True, cascade='all, delete-orphan')
+    tests = db.relationship('TaskTest', backref='task', lazy=True, cascade='all, delete-orphan', passive_deletes=True)
 
 class TestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -896,11 +896,57 @@ def delete_lesson(lesson_id):
     if not current_user.is_admin:
         abort(403)
     
-    lesson = Lesson.query.get_or_404(lesson_id)
-    db.session.delete(lesson)
-    db.session.commit()
+    try:
+        lesson = Lesson.query.get_or_404(lesson_id)
+        
+        # Проверяем, является ли урок обязательным для других уроков
+        if lesson.next_lessons:
+            flash('Невозможно удалить урок, так как он является обязательным для других уроков', 'danger')
+            return redirect(url_for('lesson_list'))
+        
+        # Удаляем связанные данные в правильном порядке
+        
+        # 1. Удаляем прогресс пользователей
+        UserProgress.query.filter_by(lesson_id=lesson_id).delete()
+        
+        # 2. Удаляем результаты тестов
+        TestResult.query.filter_by(lesson_id=lesson_id).delete()
+        
+        # 3. Удаляем тест по теории и его вопросы
+        if lesson.theory_test:
+            # Сначала удаляем все вопросы теста
+            TestQuestion.query.filter_by(test_id=lesson.theory_test.id).delete()
+            # Затем удаляем сам тест
+            db.session.delete(lesson.theory_test)
+        
+        # 4. Удаляем практические задачи и их тесты
+        # Получаем все задачи урока
+        tasks = PracticeTask.query.filter_by(lesson_id=lesson_id).all()
+        for task in tasks:
+            # Удаляем все тесты задачи
+            TaskTest.query.filter_by(task_id=task.id).delete()
+            # Удаляем решения задач
+            Solution.query.filter_by(task_id=task.id).delete()
+            # Удаляем комментарии к решениям
+            SolutionComment.query.filter(SolutionComment.solution_id.in_(
+                db.session.query(Solution.id).filter_by(task_id=task.id)
+            )).delete()
+            # Удаляем саму задачу
+            db.session.delete(task)
+        
+        # 5. Удаляем сам урок
+        db.session.delete(lesson)
+        
+        # Сохраняем изменения
+        db.session.commit()
+        
+        flash('Урок и все связанные с ним данные успешно удалены', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ошибка при удалении урока: {str(e)}', 'danger')
+        app.logger.error(f'Ошибка при удалении урока {lesson_id}: {str(e)}')
     
-    flash('Урок успешно удален', 'success')
     return redirect(url_for('lesson_list'))
 
 @app.route('/admin/lessons/<int:lesson_id>')
