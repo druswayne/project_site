@@ -1,0 +1,55 @@
+/* Основные переменные для киберпанк темы */
+:root[data-theme="cyberpunk"] {
+    --cyber-primary: #00cc7a;
+    --cyber-secondary: #ff6600;
+    --cyber-dark: #1a1a1a;
+    --cyber-bg: #2a2a2a;
+    --cyber-text: #e0e0e0;
+    --cyber-text-light: #ffffff;
+    --cyber-text-muted: #b0b0b0;
+    --cyber-card-bg: #1a1a1a;
+    --cyber-text-dark: #333333;
+    --cyber-info: #ff00ff;
+}
+
+/* Переменные для нейтральной темы */
+:root[data-theme="neutral"] {
+    --cyber-primary: #4a6fa5;
+    --cyber-secondary: #6c757d;
+    --cyber-dark: #f8f9fa;
+    --cyber-bg: #ffffff;
+    --cyber-text: #212529;
+    --cyber-text-light: #343a40;
+    --cyber-text-muted: #6c757d;
+    --cyber-card-bg: #f8f9fa;
+    --cyber-text-dark: #212529;
+    --cyber-info: #17a2b8;
+}
+
+/* Переменные для классической темы */
+:root[data-theme="classic"] {
+    --cyber-primary: #2c3e50;
+    --cyber-secondary: #34495e;
+    --cyber-dark: #ecf0f1;
+    --cyber-bg: #ffffff;
+    --cyber-text: #2c3e50;
+    --cyber-text-light: #34495e;
+    --cyber-text-muted: #7f8c8d;
+    --cyber-card-bg: #ecf0f1;
+    --cyber-text-dark: #2c3e50;
+    --cyber-info: #3498db;
+}
+
+/* Переменные для темной темы */
+:root[data-theme="dark"] {
+    --cyber-primary: #3498db;
+    --cyber-secondary: #2980b9;
+    --cyber-dark: #1a1a1a;
+    --cyber-bg: #2c3e50;
+    --cyber-text: #ecf0f1;
+    --cyber-text-light: #ffffff;
+    --cyber-text-muted: #bdc3c7;
+    --cyber-card-bg: #34495e;
+    --cyber-text-dark: #ecf0f1;
+    --cyber-info: #3498db;
+} 

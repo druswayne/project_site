@@ -1,0 +1,82 @@
+body {
+    font-family: 'Orbitron', sans-serif;
+    background-color: var(--cyber-bg);
+    color: var(--cyber-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+body.theme-loaded {
+    opacity: 1;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--cyber-text-light);
+}
+
+p {
+    color: var(--cyber-text);
+}
+
+.text-white {
+    color: var(--cyber-text-light) !important;
+}
+
+.text-white:hover {
+    color: var(--cyber-primary) !important;
+    text-shadow: 0 0 10px var(--cyber-primary);
+}
+
+.text-muted {
+    color: var(--cyber-text-muted) !important;
+}
+
+/* Навигация */
+.navbar {
+    background-color: var(--cyber-dark) !important;
+    border-bottom: 2px solid var(--cyber-primary);
+}
+
+.navbar-brand {
+    color: var(--cyber-primary) !important;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.nav-link {
+    color: var(--cyber-text-light) !important;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--cyber-primary) !important;
+    text-shadow: 0 0 10px var(--cyber-primary);
+}
+
+/* Основные секции */
+.hero-section {
+    background: linear-gradient(45deg, var(--cyber-dark), var(--cyber-bg));
+    border-bottom: 2px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+    padding: 100px 0;
+    margin-bottom: 50px;
+}
+
+.footer {
+    background-color: var(--cyber-dark);
+    border-top: 2px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+    padding: 50px 0;
+    margin-top: auto;
+}
+
+/* Уведомления */
+.alert {
+    background-color: var(--cyber-card-bg);
+    border: 1px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+} 

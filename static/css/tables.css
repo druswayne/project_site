@@ -1,0 +1,47 @@
+/* Таблицы */
+.table {
+    color: var(--cyber-text-light);
+}
+
+.table thead th {
+    background-color: var(--cyber-card-bg);
+    border-bottom: 2px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+}
+
+.table tbody tr {
+    background-color: var(--cyber-card-bg);
+    border-bottom: 1px solid rgba(0, 255, 157, 0.1);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 255, 157, 0.05);
+}
+
+/* Пагинация */
+.pagination {
+    margin-top: 1rem;
+}
+
+.page-link {
+    background-color: var(--cyber-card-bg);
+    border-color: var(--cyber-primary);
+    color: var(--cyber-text-light);
+}
+
+.page-link:hover {
+    background-color: var(--cyber-primary);
+    border-color: var(--cyber-primary);
+    color: var(--cyber-dark);
+}
+
+.page-item.active .page-link {
+    background-color: var(--cyber-primary);
+    border-color: var(--cyber-primary);
+}
+
+.page-item.disabled .page-link {
+    background-color: var(--cyber-card-bg);
+    border-color: var(--cyber-primary);
+    color: var(--cyber-text-muted);
+} 

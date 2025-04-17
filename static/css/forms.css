@@ -1,0 +1,70 @@
+/* Формы */
+.form-control {
+    background-color: var(--cyber-card-bg);
+    border: 1px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+    border-radius: 0;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    background-color: var(--cyber-card-bg);
+    border-color: var(--cyber-primary);
+    color: var(--cyber-text-light);
+    box-shadow: 0 0 10px var(--cyber-primary);
+}
+
+.form-label {
+    color: var(--cyber-text-light);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-text {
+    color: var(--cyber-text-muted);
+}
+
+/* Чекбоксы и радио-кнопки */
+.form-check-input {
+    background-color: var(--cyber-card-bg);
+    border-color: var(--cyber-primary);
+}
+
+.form-check-input:checked {
+    background-color: var(--cyber-primary);
+    border-color: var(--cyber-primary);
+}
+
+.form-check-label {
+    color: var(--cyber-text-light);
+}
+
+/* Селекты */
+.form-select {
+    background-color: var(--cyber-card-bg);
+    border: 1px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+}
+
+.form-select:focus {
+    border-color: var(--cyber-primary);
+    box-shadow: 0 0 10px var(--cyber-primary);
+}
+
+/* Валидация форм */
+.is-invalid {
+    border-color: var(--cyber-secondary) !important;
+}
+
+.invalid-feedback {
+    color: var(--cyber-secondary);
+}
+
+.is-valid {
+    border-color: var(--cyber-primary) !important;
+}
+
+.valid-feedback {
+    color: var(--cyber-primary);
+} 

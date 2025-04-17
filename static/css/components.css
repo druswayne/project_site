@@ -1,0 +1,60 @@
+/* Карточки */
+.card {
+    background-color: var(--cyber-card-bg);
+    border: 1px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+}
+
+.card-header {
+    background-color: rgba(0, 255, 157, 0.1);
+    border-bottom: 1px solid var(--cyber-primary);
+    color: var(--cyber-text-light);
+}
+
+.card-body {
+    background-color: var(--cyber-card-bg);
+    color: var(--cyber-text-light);
+}
+
+.feature-card {
+    background-color: var(--cyber-card-bg);
+    border: 1px solid var(--cyber-primary);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+    box-shadow: 0 0 20px rgba(0, 255, 157, 0.1);
+    color: var(--cyber-text-light);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 30px rgba(0, 255, 157, 0.2);
+}
+
+/* Кнопки */
+.btn-outline-light {
+    border-color: var(--cyber-primary);
+    color: var(--cyber-primary);
+    transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+    background-color: var(--cyber-primary);
+    color: var(--cyber-dark);
+    box-shadow: 0 0 20px var(--cyber-primary);
+}
+
+/* Выпадающие меню */
+.dropdown-menu {
+    background-color: var(--cyber-card-bg);
+    border: 1px solid var(--cyber-primary);
+}
+
+.dropdown-item {
+    color: var(--cyber-text-light);
+}
+
+.dropdown-item:hover {
+    background-color: rgba(0, 255, 157, 0.1);
+    color: var(--cyber-primary);
+} 
