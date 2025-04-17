@@ -315,7 +315,8 @@ def login():
         password = request.form.get('password')
         remember = True if request.form.get('remember') else False
         
-        user = User.query.filter_by(username=username).first()
+        # Поиск пользователя без учета регистра
+        user = User.query.filter(db.func.lower(User.username) == db.func.lower(username)).first()
         
         if not user or not user.check_password(password):
             flash('Неверный логин или пароль')
