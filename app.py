@@ -2,12 +2,13 @@ from flask import Flask, render_template, request, redirect, url_for, flash, abo
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import signal
 import shutil
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 import string
 from functools import wraps
@@ -17,6 +18,29 @@ import tempfile
 import psutil
 
 load_dotenv()
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # Увеличиваем время жизни CSRF токена до 1 часа
+app.config['WTF_CSRF_SSL_STRICT'] = False  # Отключаем строгую проверку SSL для разработки
+
+# Инициализация Flask-WTF
+csrf = CSRFProtect(app)
+
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@app.before_request
+def before_request():
+    # Обновляем время жизни сессии при каждом запросе
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(hours=1)
+    session.modified = True
 
 # Список запрещенных модулей и функций
 FORBIDDEN_IMPORTS = {
@@ -82,17 +106,6 @@ def teacher_required(f):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
 
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -539,12 +552,7 @@ def view_lesson_theory(lesson_id):
             is_completed=False
         )
         db.session.add(progress)
-    
-    # Отмечаем теорию как пройденную
-    if not progress.theory_completed:
-        progress.theory_completed = True
         db.session.commit()
-        flash('Теоретический материал изучен!')
     
     return render_template('student/theory.html', lesson=lesson, progress=progress)
 
@@ -2015,6 +2023,30 @@ def add_solution_comment(solution_id):
     return redirect(url_for('view_user_lesson_details', 
                           user_id=solution.user_id, 
                           lesson_id=task.lesson_id))
+
+@app.route('/student/lesson/<int:lesson_id>/theory/complete', methods=['POST'])
+@login_required
+def complete_theory(lesson_id):
+    # Получаем прогресс пользователя
+    progress = UserProgress.query.filter_by(
+        user_id=current_user.id,
+        lesson_id=lesson_id
+    ).first()
+    
+    if not progress:
+        progress = UserProgress(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            is_completed=False
+        )
+        db.session.add(progress)
+    
+    # Отмечаем теорию как пройденную
+    progress.theory_completed = True
+    db.session.commit()
+    
+    flash('Теоретический материал успешно изучен!', 'success')
+    return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
 
 if __name__ == '__main__':
     with app.app_context():
