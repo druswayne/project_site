@@ -3,37 +3,36 @@
 {% block title %}Добавление пользователя{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Добавление нового пользователя</h4>
-                </div>
-                <div class="card-body">
-                    <form method="POST">
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Имя</label>
-                            <input type="text" class="form-control" id="name" name="name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Логин</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
-                            <div class="form-text">Логин будет использоваться для входа в систему</div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Пароль</label>
-                            <input type="text" class="form-control" id="password" name="password" value="{{ initial_password }}" required>
-                            <div class="form-text">Рекомендуется использовать сгенерированный пароль</div>
-                        </div>
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Создать пользователя</button>
-                            <a href="{{ url_for('user_list') }}" class="btn btn-secondary">Отмена</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
+<div class="container mt-4">
+    <h2>Добавление нового пользователя</h2>
+    
+    <form method="POST" class="mt-4">
+        <div class="form-group">
+            <label for="name">Имя пользователя</label>
+            <input type="text" class="form-control" id="name" name="name" required>
         </div>
-    </div>
+        
+        <div class="form-group">
+            <label for="username">Логин</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Пароль</label>
+            <input type="text" class="form-control" id="password" name="password" value="{{ initial_password }}" required>
+        </div>
+        
+        {% if can_create_teachers %}
+        <div class="form-group">
+            <label for="user_type">Тип пользователя</label>
+            <select class="form-control" id="user_type" name="user_type">
+                <option value="student">Студент</option>
+                <option value="teacher">Преподаватель</option>
+            </select>
+        </div>
+        {% endif %}
+        
+        <button type="submit" class="btn btn-primary">Создать пользователя</button>
+    </form>
 </div>
 {% endblock %} 

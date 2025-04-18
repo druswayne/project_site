@@ -70,7 +70,15 @@ def check_code_safety(code):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
+        if not current_user.is_authenticated or not current_user.is_super_admin():
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+def teacher_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not (current_user.is_teacher() or current_user.is_super_admin()):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function
@@ -134,6 +142,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     is_admin = db.Column(db.Boolean, default=False)
+    user_type = db.Column(db.String(20), default='student')  # student, teacher, admin
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # ID пользователя, создавшего этого пользователя
     created_at = db.Column(db.DateTime, default=db.func.now())
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
@@ -142,12 +152,22 @@ class User(UserMixin, db.Model):
     progress = db.relationship('UserProgress', backref='user', lazy=True)
     ratings = db.relationship('UserRating', backref='user', lazy=True)
     chat_messages = db.relationship('ChatMessage', backref='user', lazy=True)
+    created_users = db.relationship('User', backref=db.backref('creator', remote_side=[id]))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def is_teacher(self):
+        return self.user_type == 'teacher'
+
+    def is_student(self):
+        return self.user_type == 'student'
+
+    def is_super_admin(self):
+        return self.is_admin and self.user_type == 'admin'
 
 class Lesson(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -614,20 +634,40 @@ def view_practice_task(lesson_id, task_id):
 def create_superadmin():
     """Создание супер-администратора при первом запуске"""
     # Проверяем, существует ли уже супер-админ
-    superadmin = User.query.filter_by(is_admin=True).first()
+    superadmin = User.query.filter_by(user_type='admin', is_admin=True).first()
     if not superadmin:
         # Создаем супер-админа
         superadmin = User(
-            name='Администратор',  # Добавляем имя
+            name='Администратор',
             email='admin@example.com',
             username='admin',
             is_admin=True,
+            user_type='admin',
             is_active=True
         )
         superadmin.set_password('admin123')  # В реальном приложении используйте более сложный пароль
         db.session.add(superadmin)
         db.session.commit()
         print('Супер-админ создан')
+
+def create_teacher():
+    """Создание преподавателя при первом запуске"""
+    # Проверяем, существует ли уже преподаватель
+    teacher = User.query.filter_by(user_type='teacher').first()
+    if not teacher:
+        # Создаем преподавателя
+        teacher = User(
+            name='Преподаватель',
+            email='teacher@example.com',
+            username='teacher',
+            is_admin=True,
+            user_type='teacher',
+            is_active=True
+        )
+        teacher.set_password('teacher123')  # В реальном приложении используйте более сложный пароль
+        db.session.add(teacher)
+        db.session.commit()
+        print('Преподаватель создан')
 
 @app.route('/admin')
 @login_required
@@ -640,11 +680,13 @@ def admin_panel():
 
 @app.route('/admin/user/<int:user_id>/edit', methods=['GET', 'POST'])
 @login_required
+@teacher_required
 def edit_user(user_id):
-    if not current_user.is_admin:
-        abort(403)
-        
     user = User.query.get_or_404(user_id)
+    
+    # Проверяем права доступа
+    if not current_user.is_super_admin() and user.created_by != current_user.id:
+        abort(403)
     
     if request.method == 'POST':
         name = request.form.get('name')
@@ -666,6 +708,17 @@ def edit_user(user_id):
         user.username = username
         user.email = email
         
+        # Обновление типа пользователя (только для администратора)
+        if current_user.is_super_admin():
+            new_user_type = request.form.get('user_type')
+            if new_user_type and new_user_type != user.user_type:
+                # Проверяем, не пытаемся ли изменить тип супер-админа
+                if user.is_super_admin():
+                    flash('Нельзя изменить тип супер-администратора', 'danger')
+                    return redirect(url_for('edit_user', user_id=user_id))
+                user.user_type = new_user_type
+                user.is_admin = (new_user_type != 'student')
+        
         # Обновление пароля, если он был указан
         if password:
             user.set_password(password)
@@ -674,7 +727,9 @@ def edit_user(user_id):
         flash('Данные пользователя успешно обновлены', 'success')
         return redirect(url_for('user_list'))
         
-    return render_template('edit_user.html', user=user)
+    return render_template('edit_user.html', 
+                         user=user,
+                         can_edit_type=current_user.is_super_admin())
 
 @app.route('/admin/user/<int:user_id>/toggle', methods=['POST'])
 @login_required
@@ -729,11 +784,15 @@ def delete_user(user_id):
 
 @app.route('/admin/users')
 @login_required
+@teacher_required
 def user_list():
-    if not current_user.is_admin:
-        abort(403)  # Запрет доступа для не-админов
-        
-    users = User.query.all()
+    # Если текущий пользователь - супер-админ, показываем всех пользователей
+    if current_user.is_super_admin():
+        users = User.query.all()
+    else:
+        # Если текущий пользователь - преподаватель, показываем только его студентов
+        users = User.query.filter_by(created_by=current_user.id).all()
+    
     return render_template('user_list.html', users=users)
 
 def generate_secure_password(length=12):
@@ -743,10 +802,8 @@ def generate_secure_password(length=12):
 
 @app.route('/admin/users/add', methods=['GET', 'POST'])
 @login_required
+@teacher_required
 def add_user():
-    if not current_user.is_admin:
-        abort(403)
-    
     if request.method == 'POST':
         name = request.form.get('name')
         username = request.form.get('username')
@@ -757,13 +814,26 @@ def add_user():
             flash('Пользователь с таким логином уже существует', 'danger')
             return redirect(url_for('add_user'))
         
+        # Определяем тип пользователя
+        if current_user.is_super_admin():
+            user_type = request.form.get('user_type', 'student')  # Администратор может выбрать тип
+        else:
+            user_type = 'student'  # Преподаватели могут создавать только студентов
+        
+        # Проверка на создание учителя
+        if user_type == 'teacher' and not current_user.is_super_admin():
+            flash('Только администратор может создавать учителей', 'danger')
+            return redirect(url_for('add_user'))
+        
         # Создание нового пользователя
         new_user = User(
             name=name,
             username=username,
-            email=f"{username}@example.com",  # Генерируем фиктивный email, так как поле обязательное
+            email=f"{username}@example.com",
             is_active=True,
-            is_admin=False
+            is_admin=(user_type != 'student'),  # Учителя и администраторы имеют права админа
+            user_type=user_type,
+            created_by=current_user.id
         )
         new_user.set_password(password)
         
@@ -775,20 +845,26 @@ def add_user():
     
     # Генерация начального пароля
     initial_password = generate_secure_password()
-    return render_template('add_user.html', initial_password=initial_password)
+    
+    # Передаем возможность выбора типа пользователя в шаблон
+    can_create_teachers = current_user.is_super_admin()
+    
+    return render_template('add_user.html', 
+                         initial_password=initial_password,
+                         can_create_teachers=can_create_teachers)
 
 @app.route('/admin/lessons')
 @login_required
+@admin_required
 def lesson_list():
-    if not current_user.is_admin:
-        abort(403)
     lessons = Lesson.query.order_by(Lesson.order_number).all()
     return render_template('lesson_list.html', lessons=lessons)
 
 @app.route('/admin/lessons/create', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def create_lesson():
-    if not current_user.is_admin:
+    if not current_user.is_super_admin():
         abort(403)
     
     if request.method == 'POST':
@@ -839,8 +915,9 @@ def create_lesson():
 
 @app.route('/admin/lessons/<int:lesson_id>/edit', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_lesson(lesson_id):
-    if not current_user.is_admin:
+    if not current_user.is_super_admin():
         abort(403)
     
     lesson = Lesson.query.get_or_404(lesson_id)
@@ -952,10 +1029,8 @@ def delete_lesson(lesson_id):
 
 @app.route('/admin/lessons/<int:lesson_id>')
 @login_required
+@teacher_required
 def view_lesson(lesson_id):
-    if not current_user.is_admin:
-        abort(403)
-    
     lesson = Lesson.query.get_or_404(lesson_id)
     return render_template('view_lesson.html', lesson=lesson)
 
@@ -1940,4 +2015,6 @@ if __name__ == '__main__':
         db.create_all()
         # Создаем супер-админа, если его нет
         create_superadmin()
+        # Создаем преподавателя, если его нет
+        create_teacher()
     app.run()
