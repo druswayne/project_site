@@ -3,6 +3,39 @@
 {% block title %}Практические задачи: {{ lesson.title }}{% endblock %}
 
 {% block content %}
+<style>
+    .accordion-body {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        position: relative;
+    }
+    
+    .accordion-body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: transparent;
+        pointer-events: none;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const accordionBodies = document.querySelectorAll('.accordion-body');
+        
+        accordionBodies.forEach(body => {
+            body.addEventListener('contextmenu', e => e.preventDefault());
+            body.addEventListener('copy', e => e.preventDefault());
+            body.addEventListener('cut', e => e.preventDefault());
+        });
+    });
+</script>
+
 <div class="container mt-4">
     <h1 class="mb-4">Практические задачи: {{ lesson.title }}</h1>
     
