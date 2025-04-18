@@ -33,16 +33,19 @@
         top: 0;
         left: 0;
         width: 100%;
-        height: 3px;
-        background-color: var(--cyber-card-bg);
+        height: 8px;
+        background-color: rgba(0, 0, 0, 0.2);
         z-index: 1001;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     .theory-progress-bar {
         height: 100%;
         width: 0;
-        background-color: var(--cyber-primary);
-        transition: width 0.3s ease;
+        background: linear-gradient(90deg, var(--cyber-primary) 0%, #00ffb3 100%);
+        transition: width 0.5s ease;
+        box-shadow: 0 0 10px var(--cyber-primary);
+        border-radius: 0 4px 4px 0;
     }
     
     .section-title {
