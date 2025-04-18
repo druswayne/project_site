@@ -1328,24 +1328,39 @@ def take_test(lesson_id):
         )
         
         total_score = 0
+        max_possible_score = 0
+        
         for question in test.questions:
-            answer = request.form.get(f'question_{question.id}')
-            result.answers[str(question.id)] = answer
+            max_possible_score += question.points
+            answer_key = f'answer_{question.id}'
             
             if question.question_type == 'single_choice':
+                answer = request.form.get(answer_key)
+                result.answers[str(question.id)] = answer
                 if answer == question.correct_answer:
                     total_score += question.points
+                    
             elif question.question_type == 'multiple_choice':
+                # Получаем все выбранные значения для множественного выбора
+                answers = request.form.getlist(f'{answer_key}[]')
+                result.answers[str(question.id)] = answers
+                
+                # Сравниваем множества выбранных и правильных ответов
                 correct_answers = set(question.correct_answer.split(','))
-                user_answers = set(answer.split(',')) if answer else set()
+                user_answers = set(answers)
                 if correct_answers == user_answers:
                     total_score += question.points
+                    
             elif question.question_type == 'text':
-                if answer.lower().strip() == question.correct_answer.lower().strip():
+                answer = request.form.get(answer_key, '').strip().lower()
+                result.answers[str(question.id)] = answer
+                if answer == question.correct_answer.strip().lower():
                     total_score += question.points
         
-        result.score = total_score
-        result.is_passed = total_score >= test.required_score
+        # Вычисляем процент правильных ответов
+        percentage_score = (total_score / max_possible_score * 100) if max_possible_score > 0 else 0
+        result.score = round(percentage_score)
+        result.is_passed = percentage_score >= test.required_score
         result.completed_at = datetime.now()
         
         db.session.add(result)
@@ -1369,11 +1384,11 @@ def take_test(lesson_id):
             if progress.theory_completed and progress.test_completed:
                 progress.is_completed = True
                 progress.completed_at = datetime.now()
-            flash('Поздравляем! Вы успешно прошли тест')
+            flash(f'Поздравляем! Вы успешно прошли тест. Ваш результат: {result.score} баллов', 'success')
             db.session.commit()
-            return redirect(url_for('view_practice_tasks', lesson_id=lesson_id))  # Перенаправляем на практические задачи
+            return redirect(url_for('view_practice_tasks', lesson_id=lesson_id))
         else:
-            flash(f'К сожалению, вы не прошли тест. Набрано баллов: {total_score}')
+            flash(f'К сожалению, вы не прошли тест. Ваш результат: {result.score} баллов. Необходимо набрать минимум {test.required_score} баллов', 'danger')
             db.session.commit()
             return redirect(url_for('test_results', lesson_id=lesson_id))
     

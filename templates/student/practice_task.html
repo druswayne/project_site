@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/copy-protection.css') }}">
+<style>
+    /* Существующие стили */
+</style>
+{% endblock %}
+
 {% block title %}{{ task.title }} - Практическая задача{% endblock %}
 
 {% block content %}
@@ -12,9 +19,9 @@
                     <h5 class="mb-0">{{ task.title }}</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
+                    <div class="task-description protected-content">
                         <h6>Описание задачи:</h6>
-                        <p>{{ task.description }}</p>
+                        <p>{{ task.description|safe }}</p>
                     </div>
                     <div class="mb-3">
                         <h6>Уровень сложности:</h6>
@@ -100,6 +107,7 @@
 
 <!-- Подключаем Ace Editor -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+<script src="{{ url_for('static', filename='js/copy-protection.js') }}"></script>
 <script>
     // Инициализация редактора
     var editor = ace.edit("editor");
@@ -170,6 +178,14 @@
                 window.location.href = "{{ url_for('view_practice_tasks', lesson_id=lesson.id) }}";
             }
         });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Защищаем описание задачи
+        const taskDescription = document.querySelector('.task-description');
+        protectContent(taskDescription);
+        
+        // Остальной JavaScript код
     });
 </script>
 {% endblock %} 
