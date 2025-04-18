@@ -92,6 +92,36 @@
         text-align: left;
         min-height: calc(100vh - 350px); /* Уменьшаем минимальную высоту */
         margin-bottom: 30px; /* Отступ для навигации */
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        position: relative;
+    }
+
+    .theory-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: transparent;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    @media print {
+        .theory-content {
+            display: none !important;
+        }
+        body::after {
+            content: "Печать материалов запрещена";
+            display: block;
+            text-align: center;
+            font-size: 24px;
+            margin-top: 50px;
+        }
     }
 
     .btn.nav-button {
@@ -219,6 +249,54 @@
             a.onclick = () => showSection(index);
             li.appendChild(a);
             menu.appendChild(li);
+        });
+
+        // Защита от копирования
+        const theoryContent = document.querySelector('.theory-content');
+        
+        // Запрет контекстного меню
+        theoryContent.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Запрет копирования
+        theoryContent.addEventListener('copy', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Запрет вырезания
+        theoryContent.addEventListener('cut', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Запрет перетаскивания
+        theoryContent.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Запрет сохранения страницы
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+S / Command+S
+            if ((e.ctrlKey || e.metaKey) && e.keyCode === 83) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Ctrl+C / Command+C
+            if ((e.ctrlKey || e.metaKey) && e.keyCode === 67) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Ctrl+Shift+C / Command+Shift+C (инструменты разработчика)
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.keyCode === 67) {
+                e.preventDefault();
+                return false;
+            }
         });
     });
     
