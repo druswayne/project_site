@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/copy-protection.css') }}">
+<style>
+// ... existing code ...
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="test-content protected-content">
+        <!-- Оберните содержимое теста в protected-content -->
+        <h2>{{ test.title }}</h2>
+        <form method="post" id="testForm">
+            {% for question in test.questions %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">{{ question.question_text }}</h5>
+                    {% if question.question_type == 'single_choice' %}
+                        {% for option in question.options %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="{{ option }}">
+                            <label class="form-check-label">{{ option }}</label>
+                        </div>
+                        {% endfor %}
+                    {% elif question.question_type == 'multiple_choice' %}
+                        {% for option in question.options %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="answer_{{ question.id }}[]" value="{{ option }}">
+                            <label class="form-check-label">{{ option }}</label>
+                        </div>
+                        {% endfor %}
+                    {% elif question.question_type == 'text' %}
+                        <input type="text" class="form-control" name="answer_{{ question.id }}">
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Отправить</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/copy-protection.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Защищаем содержимое теста
+    const testContent = document.querySelector('.test-content');
+    protectContent(testContent);
+});
+</script>
+{% endblock %} 

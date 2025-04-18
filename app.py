@@ -498,12 +498,7 @@ def view_lesson_theory(lesson_id):
             is_completed=False
         )
         db.session.add(progress)
-    
-    # Отмечаем теорию как пройденную
-    if not progress.theory_completed:
-        progress.theory_completed = True
         db.session.commit()
-        flash('Теоретический материал изучен!')
     
     return render_template('student/theory.html', lesson=lesson, progress=progress)
 
@@ -1260,6 +1255,16 @@ def take_test(lesson_id):
         flash('Тест не найден или неактивен')
         return redirect(url_for('view_student_lesson', lesson_id=lesson_id))
     
+    # Проверяем, пройдена ли теория
+    progress = UserProgress.query.filter_by(
+        user_id=current_user.id,
+        lesson_id=lesson_id
+    ).first()
+    
+    if not progress or not progress.theory_completed:
+        flash('Сначала необходимо пройти теоретический материал')
+        return redirect(url_for('view_lesson_theory', lesson_id=lesson_id))
+    
     # Получаем все попытки прохождения теста
     previous_results = TestResult.query.filter_by(
         user_id=current_user.id,
@@ -1325,18 +1330,6 @@ def take_test(lesson_id):
         db.session.add(result)
         
         # Обновляем прогресс пользователя
-        progress = UserProgress.query.filter_by(
-            user_id=current_user.id,
-            lesson_id=lesson_id
-        ).first()
-        
-        if not progress:
-            progress = UserProgress(
-                user_id=current_user.id,
-                lesson_id=lesson_id
-            )
-            db.session.add(progress)
-        
         if result.is_passed:
             progress.test_completed = True
             # Проверяем, все ли блоки пройдены

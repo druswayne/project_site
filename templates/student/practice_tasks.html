@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/copy-protection.css') }}">
+<style>
+    .task-card {
+        transition: transform 0.3s ease;
+    }
+    
+    .task-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .task-status {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Практические задания</h2>
+        <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">
+            <i class="fa-solid fa-chevron-left me-2"></i>Назад к уроку
+        </a>
+    </div>
+
+    <div class="row">
+        {% for task in tasks %}
+        <div class="col-md-6 mb-4">
+            <div class="card task-card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ task.title }}</h5>
+                </div>
+                <div class="card-body protected-content">
+                    <div class="task-status">
+                        {% if task.id in completed_tasks %}
+                        <span class="badge bg-success">Выполнено</span>
+                        {% else %}
+                        <span class="badge bg-warning">Не выполнено</span>
+                        {% endif %}
+                    </div>
+                    <p class="card-text">{{ task.description|safe }}</p>
+                    <div class="mt-3">
+                        <span class="badge {% if task.order_number <= 2 %}bg-success{% elif task.order_number <= 4 %}bg-warning{% else %}bg-danger{% endif %}">
+                            {% if task.order_number <= 2 %}Легкая
+                            {% elif task.order_number <= 4 %}Средняя
+                            {% else %}Сложная
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('view_practice_task', lesson_id=lesson.id, task_id=task.id) }}" class="btn btn-primary">
+                        {% if task.id in completed_tasks %}
+                        Просмотреть решение
+                        {% else %}
+                        Решить задачу
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/copy-protection.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Защищаем все описания задач
+    const protectedContents = document.querySelectorAll('.protected-content');
+    protectedContents.forEach(content => {
+        protectContent(content);
+    });
+});
+</script>
+{% endblock %} 
