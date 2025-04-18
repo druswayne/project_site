@@ -2,41 +2,249 @@
 
 {% block title %}{{ lesson.title }} - Теория{% endblock %}
 
+{% block extra_css %}
+<style>
+    .theory-section {
+        display: none;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+    
+    .theory-section.active {
+        display: block;
+        opacity: 1;
+    }
+    
+    .theory-navigation {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background-color: var(--cyber-card-bg);
+        padding: 10px 20px;
+        border-radius: 30px;
+        box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+        border: 1px solid var(--cyber-primary);
+    }
+    
+    .theory-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background-color: var(--cyber-card-bg);
+        z-index: 1001;
+    }
+    
+    .theory-progress-bar {
+        height: 100%;
+        width: 0;
+        background-color: var(--cyber-primary);
+        transition: width 0.3s ease;
+    }
+    
+    .section-title {
+        margin-bottom: 20px;
+        color: var(--cyber-primary);
+        font-weight: bold;
+    }
+    
+    .nav-button {
+        background-color: transparent;
+        border: 1px solid var(--cyber-primary);
+        color: var(--cyber-primary);
+        padding: 5px 15px;
+        margin: 0 5px;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-button:hover {
+        background-color: var(--cyber-primary);
+        color: var(--cyber-dark);
+    }
+    
+    .nav-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .sections-dropdown {
+        display: inline-block;
+        margin: 0 10px;
+    }
+    
+    .current-section {
+        color: var(--cyber-primary);
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
-    <h1 class="mb-4">{{ lesson.title }}</h1>
+    <h2>{{ lesson.title }}</h2>
     
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Теоретический материал</h5>
-                </div>
-                <div class="card-body">
-                    <div class="theory-content">
-                        {{ lesson.theory_content | safe }}
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="theory-progress">
+        <div class="theory-progress-bar" id="progressBar"></div>
+    </div>
+    
+    <div class="theory-content mt-4" id="theoryContent">
+        <!-- Секции теории будут добавлены здесь динамически -->
+    </div>
+    
+    <div class="theory-navigation">
+        <button class="nav-button" id="prevButton" onclick="prevSection()" disabled>
+            <i class="fas fa-arrow-left"></i>
+        </button>
         
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Навигация</h5>
-                </div>
-                <div class="card-body">
-                    <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-secondary mb-2">
-                        Вернуться к уроку
-                    </a>
-                    {% if lesson.theory_test %}
-                        <a href="{{ url_for('take_test', lesson_id=lesson.id) }}" class="btn btn-primary">
-                            Пройти тест
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
+        <span class="current-section">
+            <span id="currentSection">1</span>/<span id="totalSections">1</span>
+        </span>
+        
+        <button class="nav-button" id="nextButton" onclick="nextSection()">
+            <i class="fas fa-arrow-right"></i>
+        </button>
+        
+        <div class="sections-dropdown d-inline-block">
+            <button class="nav-button" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="dropdown-menu" id="sectionsMenu">
+                <!-- Список секций будет добавлен здесь динамически -->
+            </ul>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentSectionIndex = 0;
+    let sections = [];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Разбиваем теорию на секции по заголовкам h1
+        const theory = `{{ lesson.theory_content|safe }}`;
+        const container = document.createElement('div');
+        container.innerHTML = theory;
+        
+        // Находим все заголовки h1
+        const headers = container.getElementsByTagName('h1');
+        let currentContent = '';
+        let currentTitle = '';
+        
+        // Создаем массив секций
+        Array.from(container.childNodes).forEach(node => {
+            if (node.tagName === 'H1') {
+                if (currentContent) {
+                    sections.push({
+                        title: currentTitle,
+                        content: currentContent
+                    });
+                }
+                currentTitle = node.textContent;
+                currentContent = '';
+            } else {
+                currentContent += node.outerHTML || node.textContent;
+            }
+        });
+        
+        // Добавляем последнюю секцию
+        if (currentContent) {
+            sections.push({
+                title: currentTitle,
+                content: currentContent
+            });
+        }
+        
+        // Если секций нет, создаем одну с полным содержимым
+        if (sections.length === 0) {
+            sections.push({
+                title: 'Теория',
+                content: theory
+            });
+        }
+        
+        // Обновляем интерфейс
+        updateUI();
+        showSection(0);
+        
+        // Заполняем выпадающее меню
+        const menu = document.getElementById('sectionsMenu');
+        sections.forEach((section, index) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.className = 'dropdown-item';
+            a.href = '#';
+            a.textContent = section.title || `Часть ${index + 1}`;
+            a.onclick = () => showSection(index);
+            li.appendChild(a);
+            menu.appendChild(li);
+        });
+    });
+    
+    function updateUI() {
+        document.getElementById('currentSection').textContent = currentSectionIndex + 1;
+        document.getElementById('totalSections').textContent = sections.length;
+        document.getElementById('prevButton').disabled = currentSectionIndex === 0;
+        document.getElementById('nextButton').disabled = currentSectionIndex === sections.length - 1;
+        
+        // Обновляем прогресс-бар
+        const progress = ((currentSectionIndex + 1) / sections.length) * 100;
+        document.getElementById('progressBar').style.width = `${progress}%`;
+    }
+    
+    function showSection(index) {
+        const content = document.getElementById('theoryContent');
+        
+        // Создаем новую секцию
+        const newSection = document.createElement('div');
+        newSection.className = 'theory-section';
+        newSection.innerHTML = sections[index].content;
+        
+        // Добавляем заголовок, если он есть
+        if (sections[index].title) {
+            const title = document.createElement('h4');
+            title.className = 'section-title';
+            title.textContent = sections[index].title;
+            newSection.insertBefore(title, newSection.firstChild);
+        }
+        
+        // Заменяем текущую секцию
+        content.innerHTML = '';
+        content.appendChild(newSection);
+        
+        // Активируем секцию с анимацией
+        setTimeout(() => {
+            newSection.classList.add('active');
+        }, 50);
+        
+        currentSectionIndex = index;
+        updateUI();
+    }
+    
+    function nextSection() {
+        if (currentSectionIndex < sections.length - 1) {
+            showSection(currentSectionIndex + 1);
+        }
+    }
+    
+    function prevSection() {
+        if (currentSectionIndex > 0) {
+            showSection(currentSectionIndex - 1);
+        }
+    }
+    
+    // Добавляем навигацию с клавиатуры
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight') {
+            nextSection();
+        } else if (e.key === 'ArrowLeft') {
+            prevSection();
+        }
+    });
+</script>
 {% endblock %} 

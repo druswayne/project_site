@@ -2024,4 +2024,4 @@ if __name__ == '__main__':
         create_superadmin()
         # Создаем преподавателя, если его нет
         create_teacher()
-    app.run()
+    app.run(debug=True)
