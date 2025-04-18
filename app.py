@@ -747,9 +747,15 @@ def toggle_user_status(user_id):
 
 @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @login_required
-@admin_required
+@teacher_required
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
+    
+    # Проверяем права доступа:
+    # - Супер-админ может удалять любых пользователей
+    # - Учитель может удалять только созданных им студентов
+    if not current_user.is_super_admin() and (user.created_by != current_user.id or user.user_type != 'student'):
+        abort(403)
     
     # Удаляем все связанные данные пользователя
     # 1. Удаляем прогресс по урокам
