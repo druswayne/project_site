@@ -133,18 +133,13 @@
         </div>
     </div>
 </div>
-
-<!-- Форма для отправки статуса завершения теории -->
-<form id="theoryCompletionForm" method="POST" action="{{ url_for('complete_theory', lesson_id=lesson.id) }}" style="display: none;">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-</form>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     let currentSectionIndex = 0;
     let sections = [];
-    let theoryCompleted = {% if progress and progress.theory_completed %}true{% else %}false{% endif %};
+    let theoryCompleted = false;
     
     document.addEventListener('DOMContentLoaded', function() {
         // Разбиваем теорию на секции по заголовкам h1
@@ -216,10 +211,10 @@
         // Обновляем прогресс-бар
         const progress = ((currentSectionIndex + 1) / sections.length) * 100;
         document.getElementById('progressBar').style.width = `${progress}%`;
-        
-        // Если достигли последней секции и теория еще не отмечена как пройденная
+
+        // Если достигли последней секции и ещё не отметили завершение
         if (currentSectionIndex === sections.length - 1 && !theoryCompleted) {
-            completeTheory();
+            markTheoryAsCompleted();
         }
     }
     
@@ -264,12 +259,6 @@
         }
     }
     
-    function completeTheory() {
-        // Отправляем форму для отметки теории как пройденной
-        document.getElementById('theoryCompletionForm').submit();
-        theoryCompleted = true;
-    }
-    
     // Добавляем навигацию с клавиатуры
     document.addEventListener('keydown', function(e) {
         if (e.key === 'ArrowRight') {
@@ -278,5 +267,25 @@
             prevSection();
         }
     });
+
+    async function markTheoryAsCompleted() {
+        try {
+            const response = await fetch('/student/lesson/{{ lesson.id }}/theory/complete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                theoryCompleted = true;
+                console.log('Теория успешно отмечена как пройденная');
+            } else {
+                console.error('Ошибка при отметке прохождения теории');
+            }
+        } catch (error) {
+            console.error('Ошибка при отправке запроса:', error);
+        }
+    }
 </script>
 {% endblock %} 
