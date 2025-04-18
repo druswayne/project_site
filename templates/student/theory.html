@@ -3,6 +3,7 @@
 {% block title %}{{ lesson.title }} - Теория{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
     .theory-section {
         display: none;
@@ -107,7 +108,7 @@
         
         <div class="theory-navigation">
             <button class="nav-button" id="prevButton" onclick="prevSection()" disabled>
-                <i class="fas fa-arrow-left"></i>
+                <i class="fa-solid fa-arrow-left"></i>
             </button>
             
             <span class="current-section">
@@ -115,12 +116,12 @@
             </span>
             
             <button class="nav-button" id="nextButton" onclick="nextSection()">
-                <i class="fas fa-arrow-right"></i>
+                <i class="fa-solid fa-arrow-right"></i>
             </button>
             
             <div class="sections-dropdown d-inline-block">
                 <button class="nav-button" type="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-bars"></i>
+                    <i class="fa-solid fa-bars"></i>
                 </button>
                 <ul class="dropdown-menu" id="sectionsMenu">
                     <!-- Список секций будет добавлен здесь динамически -->
