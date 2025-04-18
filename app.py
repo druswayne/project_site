@@ -284,47 +284,6 @@ def load_user(user_id):
 def index():
     return render_template('index.html')
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('student_dashboard'))
-        
-    if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        username = request.form.get('username')
-        password = request.form.get('password')
-        password_confirm = request.form.get('password_confirm')
-        
-        if password != password_confirm:
-            flash('Пароли не совпадают')
-            return redirect(url_for('register'))
-            
-        if User.query.filter_by(email=email).first():
-            flash('Пользователь с таким email уже существует')
-            return redirect(url_for('register'))
-            
-        if User.query.filter_by(username=username).first():
-            flash('Пользователь с таким именем уже существует')
-            return redirect(url_for('register'))
-            
-        user = User(
-            name=name,
-            email=email,
-            username=username,
-            is_active=True,
-            is_admin=False
-        )
-        user.set_password(password)
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        flash('Регистрация успешна! Теперь вы можете войти.')
-        return redirect(url_for('login'))
-        
-    return render_template('register.html')
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
