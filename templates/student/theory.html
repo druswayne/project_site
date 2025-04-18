@@ -16,16 +16,15 @@
     }
     
     .theory-navigation {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
+        margin-top: 30px;
+        margin-bottom: 20px;
+        text-align: center;
         background-color: var(--cyber-card-bg);
         padding: 10px 20px;
         border-radius: 30px;
         box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
         border: 1px solid var(--cyber-primary);
+        display: inline-block;
     }
     
     .theory-progress {
@@ -80,6 +79,16 @@
         color: var(--cyber-primary);
         font-weight: bold;
     }
+
+    .theory-content-wrapper {
+        text-align: center;
+    }
+
+    .theory-content {
+        text-align: left;
+        min-height: calc(100vh - 350px); /* Уменьшаем минимальную высоту */
+        margin-bottom: 30px; /* Отступ для навигации */
+    }
 </style>
 {% endblock %}
 
@@ -91,30 +100,32 @@
         <div class="theory-progress-bar" id="progressBar"></div>
     </div>
     
-    <div class="theory-content mt-4" id="theoryContent">
-        <!-- Секции теории будут добавлены здесь динамически -->
-    </div>
-    
-    <div class="theory-navigation">
-        <button class="nav-button" id="prevButton" onclick="prevSection()" disabled>
-            <i class="fas fa-arrow-left"></i>
-        </button>
+    <div class="theory-content-wrapper">
+        <div class="theory-content mt-4" id="theoryContent">
+            <!-- Секции теории будут добавлены здесь динамически -->
+        </div>
         
-        <span class="current-section">
-            <span id="currentSection">1</span>/<span id="totalSections">1</span>
-        </span>
-        
-        <button class="nav-button" id="nextButton" onclick="nextSection()">
-            <i class="fas fa-arrow-right"></i>
-        </button>
-        
-        <div class="sections-dropdown d-inline-block">
-            <button class="nav-button" type="button" data-bs-toggle="dropdown">
-                <i class="fas fa-bars"></i>
+        <div class="theory-navigation">
+            <button class="nav-button" id="prevButton" onclick="prevSection()" disabled>
+                <i class="fas fa-arrow-left"></i>
             </button>
-            <ul class="dropdown-menu" id="sectionsMenu">
-                <!-- Список секций будет добавлен здесь динамически -->
-            </ul>
+            
+            <span class="current-section">
+                <span id="currentSection">1</span>/<span id="totalSections">1</span>
+            </span>
+            
+            <button class="nav-button" id="nextButton" onclick="nextSection()">
+                <i class="fas fa-arrow-right"></i>
+            </button>
+            
+            <div class="sections-dropdown d-inline-block">
+                <button class="nav-button" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <ul class="dropdown-menu" id="sectionsMenu">
+                    <!-- Список секций будет добавлен здесь динамически -->
+                </ul>
+            </div>
         </div>
     </div>
 </div>
