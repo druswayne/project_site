@@ -855,17 +855,24 @@ def add_user():
 
 @app.route('/admin/lessons')
 @login_required
-@admin_required
+@teacher_required
 def lesson_list():
+    # Если пользователь не супер-администратор, перенаправляем в личный кабинет
+    if not current_user.is_super_admin():
+        flash('Доступ к управлению уроками имеет только администратор', 'warning')
+        return redirect(url_for('student_dashboard'))
+    
     lessons = Lesson.query.order_by(Lesson.order_number).all()
     return render_template('lesson_list.html', lessons=lessons)
 
 @app.route('/admin/lessons/create', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@teacher_required
 def create_lesson():
+    # Если пользователь не супер-администратор, перенаправляем в личный кабинет
     if not current_user.is_super_admin():
-        abort(403)
+        flash('Доступ к управлению уроками имеет только администратор', 'warning')
+        return redirect(url_for('student_dashboard'))
     
     if request.method == 'POST':
         try:
