@@ -51,9 +51,9 @@
                 <input type="hidden" name="task_id" value="{{ task.id }}">
                 <div class="form-group">
                     <label for="test_file">Загрузить тесты из файла</label>
-                    <input type="file" class="form-control-file" id="test_file" name="file" accept=".txt" required>
+                    <input type="file" class="form-control-file" id="test_file" name="file" accept=".json" required>
                     <small class="form-text text-muted">
-                        Поддерживается формат .txt. Пример формата можно скачать <a href="{{ url_for('static', filename='test_template.txt') }}" download>здесь</a>
+                        Поддерживается формат .json. Пример формата можно скачать <a href="{{ url_for('static', filename='test_template.json') }}" download>здесь</a>
                     </small>
                 </div>
                 <button type="submit" class="btn btn-success mt-3">Загрузить тесты</button>

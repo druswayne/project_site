@@ -15,6 +15,7 @@ import subprocess
 import uuid
 import tempfile
 import psutil
+import json
 
 load_dotenv()
 
@@ -1441,8 +1442,8 @@ def upload_task_tests():
         flash('Необходимо выбрать файл и указать ID задачи', 'danger')
         return redirect(request.referrer or url_for('index'))
         
-    if not file.filename.endswith('.txt'):
-        flash('Поддерживаются только текстовые файлы (.txt)', 'danger')
+    if not file.filename.endswith('.json'):
+        flash('Поддерживаются только JSON файлы (.json)', 'danger')
         return redirect(request.referrer or url_for('index'))
         
     task = PracticeTask.query.get_or_404(task_id)
@@ -1472,46 +1473,52 @@ def upload_task_tests():
     return redirect(url_for('edit_practice_tasks', lesson_id=task.lesson_id))
 
 def parse_test_file(content):
-    tests = []
-    order_number = 1
-    
-    for line in content.split('\n'):
-        line = line.strip()
-        if not line:
-            continue
-            
-        # Проверяем, является ли тест скрытым
-        is_hidden = line.startswith('#')
-        if is_hidden:
-            line = line[1:].strip()
-            
-        # Извлекаем функцию и ожидаемый результат
-        try:
-            # Удаляем скобки и разделяем на функцию и результат
-            line = line.strip('()')
-            function_part, expected_output = line.split(',', 1)
-            
-            # Извлекаем имя функции и аргументы
-            function_name = function_part[:function_part.find('(')].strip()
-            args = function_part[function_part.find('(')+1:function_part.rfind(')')].strip()
-            
-            test = {
-                'order_number': order_number,
-                'function': function_name,
-                'input_data': args,
-                'expected_output': expected_output.strip(),
-                'is_hidden': is_hidden
+    """
+    Парсит JSON-файл с тестами для практической задачи.
+    Формат файла:
+    {
+        "tests": [
+            {
+                "input": [1, 2, 3],  # Список аргументов
+                "output": 6,         # Ожидаемый результат
+                "is_hidden": false,  # Скрытый тест или нет
+                "order": 1           # Порядковый номер
+            },
+            {
+                "input": ["hello", "world"],
+                "output": "helloworld",
+                "is_hidden": true,
+                "order": 2
             }
+        ]
+    }
+    """
+    try:
+        data = json.loads(content)
+        if not isinstance(data, dict) or 'tests' not in data:
+            raise ValueError("Неверный формат файла. Ожидается объект с полем 'tests'")
             
-            tests.append(test)
-            order_number += 1
+        tests = []
+        for test in data['tests']:
+            if not all(key in test for key in ['input', 'output', 'order']):
+                raise ValueError("Каждый тест должен содержать поля 'input', 'output' и 'order'")
+                
+            # Преобразуем входные данные в строку для хранения в БД
+            input_str = json.dumps(test['input'])
+            output_str = json.dumps(test['output'])
             
-        except Exception as e:
-            print(f"Ошибка при разборе строки: {line}")
-            print(f"Ошибка: {str(e)}")
-            continue
+            tests.append({
+                'input_data': input_str,
+                'expected_output': output_str,
+                'is_hidden': test.get('is_hidden', False),
+                'order_number': test['order']
+            })
             
-    return tests
+        return tests
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Ошибка парсинга JSON: {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Ошибка при обработке файла: {str(e)}")
 
 def next_line(content, current_line):
     lines = content.split('\n')
@@ -1641,8 +1648,17 @@ def run_tests():
             with open('temp.py', 'w', encoding='utf-8') as f:
                 f.write(code)
             
+            # Парсим входные данные из JSON
+            input_data = json.loads(test.input_data)
+            
             # Создаем строку для вызова функции с аргументами
-            function_call = f"print({test.function}({test.input_data}))"
+            if isinstance(input_data, list):
+                # Если входные данные - список, распаковываем его в аргументы
+                args_str = ', '.join(repr(arg) for arg in input_data)
+                function_call = f"print({test.function}({args_str}))"
+            else:
+                # Если входные данные - один аргумент
+                function_call = f"print({test.function}({repr(input_data)}))"
             
             # Запускаем код с тестовыми данными
             process = subprocess.Popen(
@@ -1655,44 +1671,49 @@ def run_tests():
             # Получаем результат
             stdout, stderr = process.communicate(timeout=5)  # 5 секунд
             
-            # Проверяем результат
-            is_correct = stdout.strip() == test.expected_output.strip()
+            # Парсим ожидаемый результат из JSON
+            expected_output = json.loads(test.expected_output)
+            
+            # Парсим полученный результат
+            try:
+                actual_output = json.loads(stdout.strip())
+            except json.JSONDecodeError:
+                actual_output = stdout.strip()
+            
+            # Сравниваем результаты
+            is_correct = actual_output == expected_output
             error = stderr if stderr else None
             
             results.append({
                 'name': f'Тест {test.order_number}',
                 'passed': is_correct,
                 'function': test.function,
-                'arguments': test.input_data,
-                'expected': test.expected_output,
-                'actual': stdout.strip(),
+                'arguments': input_data,
+                'expected': expected_output,
+                'actual': actual_output,
                 'error': error
             })
             
         except subprocess.TimeoutExpired:
-            process.kill()
             results.append({
                 'name': f'Тест {test.order_number}',
                 'passed': False,
                 'function': test.function,
-                'arguments': test.input_data,
-                'expected': test.expected_output,
-                'error': 'Превышено время выполнения теста'
+                'arguments': input_data,
+                'expected': expected_output,
+                'actual': None,
+                'error': 'Превышено время выполнения (5 секунд)'
             })
         except Exception as e:
             results.append({
                 'name': f'Тест {test.order_number}',
                 'passed': False,
                 'function': test.function,
-                'arguments': test.input_data,
-                'expected': test.expected_output,
+                'arguments': input_data,
+                'expected': expected_output,
+                'actual': None,
                 'error': str(e)
             })
-        
-        finally:
-            # Удаляем временный файл
-            if os.path.exists('temp.py'):
-                os.remove('temp.py')
     
     return jsonify({'tests': results})
 
