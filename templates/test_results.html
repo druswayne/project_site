@@ -5,13 +5,13 @@
     <h2>Результаты теста: {{ test.title }}</h2>
     <h4>Урок: {{ lesson.title }}</h4>
 
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-info">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    #{% with messages = get_flashed_messages() %}
+    #    {% if messages %}
+    #        {% for message in messages %}
+    #            <div class="alert alert-info">{{ message }}</div>
+    #        {% endfor %}
+    #    {% endif %}
+    #{% endwith %}
 
     <div class="card mb-4">
         <div class="card-body">
