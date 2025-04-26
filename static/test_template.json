@@ -1,0 +1,22 @@
+{
+    "tests": [
+        {
+            "input": [1, 2, 3],
+            "output": 6,
+            "is_hidden": false,
+            "order": 1
+        },
+        {
+            "input": ["hello", "world"],
+            "output": "helloworld",
+            "is_hidden": false,
+            "order": 2
+        },
+        {
+            "input": [{"a": 1, "b": 2}, {"c": 3}],
+            "output": {"a": 1, "b": 2, "c": 3},
+            "is_hidden": true,
+            "order": 3
+        }
+    ]
+} 

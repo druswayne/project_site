@@ -1283,66 +1283,103 @@ def take_test(lesson_id):
                             results=previous_results)
     
     if request.method == 'POST':
-        # Создаем новую попытку прохождения теста
-        result = TestResult(
-            user_id=current_user.id,
-            lesson_id=lesson_id,
-            test_id=test.id,
-            started_at=datetime.now(),
-            answers={}
-        )
-        
-        total_score = 0
-        max_possible_score = 0
-        
-        for question in test.questions:
-            max_possible_score += question.points
-            answer_key = f'answer_{question.id}'
+        try:
+            # Проверяем время выполнения теста
+            if test.time_limit:
+                start_time = datetime.now()
+                time_elapsed = (start_time - previous_results[0].started_at).total_seconds() / 60 if previous_results else 0
+                if time_elapsed > test.time_limit:
+                    flash(f'Время на прохождение теста истекло. Лимит: {test.time_limit} минут', 'danger')
+                    return redirect(url_for('test_results', lesson_id=lesson_id))
             
-            if question.question_type == 'single_choice':
-                answer = request.form.get(answer_key)
-                result.answers[str(question.id)] = answer
-                if answer == question.correct_answer:
-                    total_score += question.points
-                    
-            elif question.question_type == 'multiple_choice':
-                # Получаем все выбранные значения для множественного выбора
-                answers = request.form.getlist(f'{answer_key}[]')
-                result.answers[str(question.id)] = answers
+            # Создаем новую попытку прохождения теста
+            result = TestResult(
+                user_id=current_user.id,
+                lesson_id=lesson_id,
+                test_id=test.id,
+                started_at=datetime.now(),
+                answers={}
+            )
+            
+            total_score = 0
+            max_possible_score = 0
+            
+            for question in test.questions:
+                max_possible_score += question.points
+                answer_key = f'answer_{question.id}'
                 
-                # Сравниваем множества выбранных и правильных ответов
-                correct_answers = set(question.correct_answer.split(','))
-                user_answers = set(answers)
-                if correct_answers == user_answers:
-                    total_score += question.points
+                if question.question_type == 'single_choice':
+                    answer = request.form.get(answer_key)
+                    if answer is None:
+                        continue
+                    result.answers[str(question.id)] = answer
+                    if answer == question.correct_answer:
+                        total_score += question.points
+                        
+                elif question.question_type == 'multiple_choice':
+                    # Получаем все выбранные значения для множественного выбора
+                    answers = request.form.getlist(f'{answer_key}[]')
+                    if not answers:
+                        continue
+                    result.answers[str(question.id)] = answers
                     
-            elif question.question_type == 'text':
-                answer = request.form.get(answer_key, '').strip().lower()
-                result.answers[str(question.id)] = answer
-                if answer == question.correct_answer.strip().lower():
-                    total_score += question.points
-        
-        # Вычисляем процент правильных ответов
-        percentage_score = (total_score / max_possible_score * 100) if max_possible_score > 0 else 0
-        result.score = round(percentage_score)
-        result.is_passed = percentage_score >= test.required_score
-        result.completed_at = datetime.now()
-        
-        db.session.add(result)
-        
-        # Обновляем прогресс пользователя
-        if result.is_passed:
-            progress.test_completed = True
-            # Проверяем, все ли блоки пройдены
-            if progress.theory_completed and progress.test_completed:
-                progress.is_completed = True
-                progress.completed_at = datetime.now()
-            flash(f'Поздравляем! Вы успешно прошли тест. Ваш результат: {result.score} баллов', 'success')
-            db.session.commit()
-            return redirect(url_for('view_practice_tasks', lesson_id=lesson_id))
-        else:
-            flash(f'К сожалению, вы не прошли тест. Ваш результат: {result.score} баллов. Необходимо набрать минимум {test.required_score} баллов', 'danger')
-            db.session.commit()
+                    # Сравниваем множества выбранных и правильных ответов
+                    try:
+                        correct_answers = json.loads(question.correct_answer)
+                        if isinstance(correct_answers, list):
+                            if set(answers) == set(correct_answers):
+                                total_score += question.points
+                    except json.JSONDecodeError:
+                        # Если не удалось распарсить JSON, используем старый метод
+                        correct_answers = set(question.correct_answer.split(','))
+                        user_answers = set(answers)
+                        if correct_answers == user_answers:
+                            total_score += question.points
+                        
+                elif question.question_type == 'text':
+                    answer = request.form.get(answer_key, '').strip().lower()
+                    if not answer:
+                        continue
+                    result.answers[str(question.id)] = answer
+                    correct_answer = question.correct_answer.strip().lower()
+                    
+                    # Более гибкое сравнение для текстовых ответов
+                    if answer == correct_answer:
+                        total_score += question.points
+                    else:
+                        # Проверяем частичное совпадение (например, для числовых ответов)
+                        try:
+                            if float(answer) == float(correct_answer):
+                                total_score += question.points
+                        except ValueError:
+                            pass
+            
+            # Вычисляем процент правильных ответов
+            percentage_score = (total_score / max_possible_score * 100) if max_possible_score > 0 else 0
+            result.score = round(percentage_score)
+            result.is_passed = percentage_score >= test.required_score
+            result.completed_at = datetime.now()
+            
+            db.session.add(result)
+            
+            # Обновляем прогресс пользователя
+            if result.is_passed:
+                progress.test_completed = True
+                # Проверяем, все ли блоки пройдены
+                if progress.theory_completed and progress.test_completed:
+                    progress.is_completed = True
+                    progress.completed_at = datetime.now()
+                flash(f'Поздравляем! Вы успешно прошли тест. Ваш результат: {result.score} баллов', 'success')
+                db.session.commit()
+                return redirect(url_for('view_practice_tasks', lesson_id=lesson_id))
+            else:
+                flash(f'К сожалению, вы не прошли тест. Ваш результат: {result.score} баллов. Необходимо набрать минимум {test.required_score} баллов', 'danger')
+                db.session.commit()
+                return redirect(url_for('test_results', lesson_id=lesson_id))
+                
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Произошла ошибка при проверке теста: {str(e)}', 'danger')
             return redirect(url_for('test_results', lesson_id=lesson_id))
     
     return render_template('take_test.html', lesson=lesson, test=test)
