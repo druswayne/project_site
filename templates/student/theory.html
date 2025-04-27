@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 <style>
     .theory-section {
         display: none;
@@ -138,6 +139,27 @@
         color: var(--cyber-dark);
         transform: translateX(-5px);
     }
+
+    /* Стили для блоков кода */
+    .ql-syntax {
+        background-color: #f8f9fa;
+        border-left: 4px solid var(--cyber-primary);
+        padding: 15px;
+        margin: 20px 0;
+        font-family: monospace;
+        white-space: pre;
+        overflow-x: auto;
+    }
+
+    .ql-syntax code {
+        background-color: transparent;
+        padding: 0;
+    }
+
+    .hljs {
+        background-color: transparent;
+        padding: 0;
+    }
 </style>
 {% endblock %}
 
@@ -186,6 +208,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
     let currentSectionIndex = 0;
     let sections = [];
@@ -316,6 +339,29 @@
         }
     }
     
+    function processCodeBlocks(content) {
+        const container = document.createElement('div');
+        container.innerHTML = content;
+        
+        // Находим все элементы с классом ql-syntax
+        const codeBlocks = container.getElementsByClassName('ql-syntax');
+        Array.from(codeBlocks).forEach(block => {
+            // Создаем новый элемент для кода
+            const code = document.createElement('code');
+            code.className = 'language-python';
+            code.textContent = block.textContent;
+            
+            // Заменяем содержимое блока
+            block.innerHTML = '';
+            block.appendChild(code);
+            
+            // Применяем подсветку синтаксиса
+            hljs.highlightElement(code);
+        });
+        
+        return container.innerHTML;
+    }
+
     function showSection(index) {
         const content = document.getElementById('theoryContent');
         
@@ -331,6 +377,10 @@
             title.textContent = sections[index].title;
             newSection.insertBefore(title, newSection.firstChild);
         }
+        
+        // Обрабатываем блоки кода в новой секции
+        const processedContent = processCodeBlocks(sections[index].content);
+        newSection.innerHTML = processedContent;
         
         // Заменяем текущую секцию
         content.innerHTML = '';
