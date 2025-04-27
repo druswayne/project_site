@@ -1284,14 +1284,6 @@ def take_test(lesson_id):
     
     if request.method == 'POST':
         try:
-            # Проверяем время выполнения теста
-            if test.time_limit:
-                start_time = datetime.now()
-                time_elapsed = (start_time - previous_results[0].started_at).total_seconds() / 60 if previous_results else 0
-                if time_elapsed > test.time_limit:
-                    flash(f'Время на прохождение теста истекло. Лимит: {test.time_limit} минут', 'danger')
-                    return redirect(url_for('test_results', lesson_id=lesson_id))
-            
             # Создаем новую попытку прохождения теста
             result = TestResult(
                 user_id=current_user.id,
@@ -1300,6 +1292,13 @@ def take_test(lesson_id):
                 started_at=datetime.now(),
                 answers={}
             )
+            
+            # Проверяем время выполнения теста
+            if test.time_limit:
+                time_elapsed = (datetime.now() - result.started_at).total_seconds() / 60
+                if time_elapsed > test.time_limit:
+                    flash(f'Время на прохождение теста истекло. Лимит: {test.time_limit} минут', 'danger')
+                    return redirect(url_for('test_results', lesson_id=lesson_id))
             
             total_score = 0
             max_possible_score = 0
