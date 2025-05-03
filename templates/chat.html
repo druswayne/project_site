@@ -61,9 +61,11 @@
                                 <h5 class="mb-1">{{ student.name }}</h5>
                                 <p class="mb-1">{{ student.email }}</p>
                             </div>
-                            {% set unread_count = student.received_messages|selectattr('is_read', 'equalto', false)|list|length %}
-                            {% if unread_count > 0 %}
-                                <span class="badge bg-primary rounded-pill">{{ unread_count }}</span>
+                            {% if student.unread_count > 0 %}
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-danger rounded-pill me-2">{{ student.unread_count }}</span>
+                                    <i class="bi bi-envelope-fill text-danger"></i>
+                                </div>
                             {% endif %}
                         </div>
                     </a>

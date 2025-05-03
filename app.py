@@ -397,8 +397,22 @@ def chat():
     # Для учителей показываем список их студентов
     elif current_user.is_teacher():
         students = User.query.filter_by(created_by=current_user.id, user_type='student').all()
+        # Для каждого студента считаем количество непрочитанных сообщений
+        students_with_unread = []
+        for student in students:
+            unread_count = ChatMessage.query.filter_by(
+                sender_id=student.id,
+                receiver_id=current_user.id,
+                is_read=False
+            ).count()
+            students_with_unread.append({
+                'id': student.id,
+                'name': student.name,
+                'email': student.email,
+                'unread_count': unread_count
+            })
         return render_template('chat.html', 
-                             students=students,
+                             students=students_with_unread,
                              is_student=False)
     
     return redirect(url_for('index'))
