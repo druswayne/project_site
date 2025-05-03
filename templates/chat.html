@@ -79,18 +79,15 @@
     const socket = io();
     
     // Функция для добавления нового сообщения в чат
-    function addMessage(message, isSent) {
+    function addMessage(message, isSent, timestamp) {
         const messagesDiv = document.getElementById('messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
         
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        
         messageDiv.innerHTML = `
             <div class="message-content">
                 <p>${message}</p>
-                <small class="text-muted">${timeString}</small>
+                <small class="text-muted">${timestamp}</small>
             </div>
         `;
         
@@ -110,8 +107,6 @@
                 receiver_id: receiverId,
                 message: message
             });
-            
-            addMessage(message, true);
             messageInput.value = '';
         }
     });
@@ -119,7 +114,7 @@
     // Обработка получения нового сообщения
     socket.on('new_message', function(data) {
         const isSent = data.sender_id === {{ current_user.id }};
-        addMessage(data.message, isSent);
+        addMessage(data.message, isSent, data.created_at);
         
         // Помечаем сообщение как прочитанное
         if (!isSent) {
