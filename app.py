@@ -776,7 +776,7 @@ def create_teacher():
             user_type='teacher',
             is_active=True
         )
-        
+
         teacher.set_password('teacher123')  # В реальном приложении используйте более сложный пароль
         db.session.add(teacher)
         db.session.commit()
