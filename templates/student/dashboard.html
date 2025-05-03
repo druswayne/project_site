@@ -9,7 +9,11 @@
     <!-- Кнопка перехода в чат -->
     <div class="mb-4">
         <a href="{{ url_for('chat') }}" class="btn btn-primary">
-            <i class="fas fa-comments"></i> Чат с учителем
+            Чат с учителем
+            {% set unread_count = current_user.received_messages|selectattr('is_read', 'equalto', false)|list|length %}
+            {% if unread_count > 0 %}
+                <span class="badge bg-danger ms-2">{{ unread_count }}</span>
+            {% endif %}
         </a>
     </div>
 
