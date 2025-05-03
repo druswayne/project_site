@@ -7,6 +7,7 @@
     <h1 class="mb-4">Студенческая панель</h1>
     
     <!-- Кнопка перехода в чат -->
+    {% if not current_user.is_admin or current_user.is_teacher() %}
     <div class="mb-4">
         <a href="{{ url_for('chat') }}" class="btn btn-primary">
             {% if current_user.is_teacher() %}
@@ -20,6 +21,7 @@
             {% endif %}
         </a>
     </div>
+    {% endif %}
 
     <div class="progress mb-4">
         <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%;" 
@@ -100,9 +102,6 @@
                             </a>
                             <a href="{{ url_for('lesson_list') }}" class="btn btn-primary">
                                 Управление уроками
-                            </a>
-                            <a href="{{ url_for('admin_panel') }}" class="btn btn-primary">
-                                Общая статистика
                             </a>
                         </div>
                     </div>
