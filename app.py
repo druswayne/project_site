@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, abo
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import signal
@@ -91,6 +92,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+socketio = SocketIO(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -428,25 +430,47 @@ def chat_with_student(student_id):
                          student=student,
                          is_student=False)
 
-@app.route('/chat/send', methods=['POST'])
-@login_required
-def send_message():
-    receiver_id = request.form.get('receiver_id')
-    message_text = request.form.get('message')
+@socketio.on('connect')
+def handle_connect():
+    if current_user.is_authenticated:
+        # Присоединяем пользователя к его персональной комнате
+        join_room(f'user_{current_user.id}')
+        if current_user.is_student():
+            # Студенты также присоединяются к комнате своего учителя
+            teacher = User.query.get(current_user.created_by)
+            if teacher:
+                join_room(f'user_{teacher.id}')
+        elif current_user.is_teacher():
+            # Учителя присоединяются к комнатам своих студентов
+            students = User.query.filter_by(created_by=current_user.id, user_type='student').all()
+            for student in students:
+                join_room(f'user_{student.id}')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    if current_user.is_authenticated:
+        leave_room(f'user_{current_user.id}')
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    if not current_user.is_authenticated:
+        return
+    
+    receiver_id = data.get('receiver_id')
+    message_text = data.get('message')
     
     if not receiver_id or not message_text:
-        flash('Неверные данные сообщения', 'error')
-        return redirect(url_for('chat'))
+        return
     
     receiver = User.query.get_or_404(receiver_id)
     
     # Проверяем права на отправку сообщения
     if current_user.is_student():
         if receiver.id != current_user.created_by:
-            abort(403)
+            return
     elif current_user.is_teacher():
         if receiver.created_by != current_user.id:
-            abort(403)
+            return
     
     # Создаем новое сообщение
     message = ChatMessage(
@@ -458,7 +482,27 @@ def send_message():
     db.session.add(message)
     db.session.commit()
     
-    return redirect(request.referrer or url_for('chat'))
+    # Отправляем сообщение получателю
+    emit('new_message', {
+        'id': message.id,
+        'sender_id': message.sender_id,
+        'receiver_id': message.receiver_id,
+        'message': message.message,
+        'created_at': message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'is_read': message.is_read
+    }, room=f'user_{receiver.id}')
+
+@socketio.on('mark_as_read')
+def handle_mark_as_read(message_id):
+    if not current_user.is_authenticated:
+        return
+    
+    message = ChatMessage.query.get_or_404(message_id)
+    if message.receiver_id != current_user.id:
+        return
+    
+    message.is_read = True
+    db.session.commit()
 
 @app.route('/student/lesson/<int:lesson_id>')
 @login_required
@@ -2175,4 +2219,4 @@ if __name__ == '__main__':
         create_superadmin()
         # Создаем преподавателя, если его нет
         create_teacher()
-    app.run(debug=True)
+    socketio.run(app, debug=True)
