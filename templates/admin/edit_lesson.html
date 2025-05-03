@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование урока{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h2 class="mb-0">Редактирование урока</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="order_number" class="form-label">Номер урока</label>
+                            <input type="number" class="form-control" id="order_number" name="order_number" 
+                                   value="{{ lesson.order_number }}" min="1" required>
+                            <div class="form-text">Порядковый номер урока в курсе</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Тема урока</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ lesson.title }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Краткое описание урока</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ lesson.description or '' }}</textarea>
+                            <div class="form-text">Краткое описание урока, которое будет отображаться в списке уроков</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                            <a href="{{ url_for('view_course', course_id=lesson.course_id) }}" class="btn btn-outline-secondary">Отмена</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{{ course.title }}</h2>
+            <p class="text-muted">{{ course.description }}</p>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('student_courses') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Назад к курсам
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Уроки курса</h5>
+        </div>
+        <div class="card-body">
+            {% if lessons %}
+            <div class="list-group">
+                {% for lesson in lessons %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Урок {{ lesson.order_number }}: {{ lesson.title }}</h6>
+                            <p class="mb-1 text-muted">{{ lesson.description|truncate(100) }}</p>
+                        </div>
+                        <div>
+                            {% if progress[lesson.id] %}
+                                {% if progress[lesson.id].is_completed %}
+                                    <span class="badge bg-success">Пройден</span>
+                                {% else %}
+                                    <span class="badge bg-warning">В процессе</span>
+                                {% endif %}
+                            {% endif %}
+                            <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-sm btn-primary">
+                                Перейти к уроку
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                В этом курсе пока нет уроков. Обратитесь к администратору.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

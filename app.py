@@ -97,10 +97,15 @@ login_manager.login_view = 'login'
 
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+    is_read = db.Column(db.Boolean, default=False)
+
+    # Связи с пользователями
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
 
 class UserRating(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -152,7 +157,6 @@ class User(UserMixin, db.Model):
     # Связи с другими моделями
     progress = db.relationship('UserProgress', backref='user', lazy=True)
     ratings = db.relationship('UserRating', backref='user', lazy=True)
-    chat_messages = db.relationship('ChatMessage', backref='user', lazy=True)
     created_users = db.relationship('User', backref=db.backref('creator', remote_side=[id]))
 
     def set_password(self, password):
@@ -360,6 +364,101 @@ def student_dashboard():
                          completed_lessons=completed_lessons,
                          total_lessons=total_lessons,
                          completed_lesson_ids=completed_lesson_ids)
+
+@app.route('/chat')
+@login_required
+def chat():
+    # Для студентов показываем чат с их учителем
+    if current_user.is_student():
+        teacher = User.query.get(current_user.created_by)
+        if not teacher:
+            flash('У вас нет назначенного учителя', 'warning')
+            return redirect(url_for('student_dashboard'))
+        
+        # Получаем сообщения
+        messages = ChatMessage.query.filter(
+            ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == teacher.id)) |
+            ((ChatMessage.sender_id == teacher.id) & (ChatMessage.receiver_id == current_user.id))
+        ).order_by(ChatMessage.created_at).all()
+        
+        # Помечаем сообщения как прочитанные
+        for message in messages:
+            if message.receiver_id == current_user.id and not message.is_read:
+                message.is_read = True
+        db.session.commit()
+        
+        return render_template('chat.html', 
+                             messages=messages, 
+                             teacher=teacher,
+                             is_student=True)
+    
+    # Для учителей показываем список их студентов
+    elif current_user.is_teacher():
+        students = User.query.filter_by(created_by=current_user.id, user_type='student').all()
+        return render_template('chat.html', 
+                             students=students,
+                             is_student=False)
+    
+    return redirect(url_for('index'))
+
+@app.route('/chat/<int:student_id>')
+@login_required
+@teacher_required
+def chat_with_student(student_id):
+    student = User.query.get_or_404(student_id)
+    
+    # Проверяем, что студент действительно создан текущим учителем
+    if student.created_by != current_user.id:
+        abort(403)
+    
+    # Получаем сообщения
+    messages = ChatMessage.query.filter(
+        ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == student.id)) |
+        ((ChatMessage.sender_id == student.id) & (ChatMessage.receiver_id == current_user.id))
+    ).order_by(ChatMessage.created_at).all()
+    
+    # Помечаем сообщения как прочитанные
+    for message in messages:
+        if message.receiver_id == current_user.id and not message.is_read:
+            message.is_read = True
+    db.session.commit()
+    
+    return render_template('chat.html', 
+                         messages=messages, 
+                         student=student,
+                         is_student=False)
+
+@app.route('/chat/send', methods=['POST'])
+@login_required
+def send_message():
+    receiver_id = request.form.get('receiver_id')
+    message_text = request.form.get('message')
+    
+    if not receiver_id or not message_text:
+        flash('Неверные данные сообщения', 'error')
+        return redirect(url_for('chat'))
+    
+    receiver = User.query.get_or_404(receiver_id)
+    
+    # Проверяем права на отправку сообщения
+    if current_user.is_student():
+        if receiver.id != current_user.created_by:
+            abort(403)
+    elif current_user.is_teacher():
+        if receiver.created_by != current_user.id:
+            abort(403)
+    
+    # Создаем новое сообщение
+    message = ChatMessage(
+        sender_id=current_user.id,
+        receiver_id=receiver.id,
+        message=message_text
+    )
+    
+    db.session.add(message)
+    db.session.commit()
+    
+    return redirect(request.referrer or url_for('chat'))
 
 @app.route('/student/lesson/<int:lesson_id>')
 @login_required

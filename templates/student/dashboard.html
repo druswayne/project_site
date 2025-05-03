@@ -6,6 +6,20 @@
 <div class="container mt-4">
     <h1 class="mb-4">Студенческая панель</h1>
     
+    <!-- Кнопка перехода в чат -->
+    <div class="mb-4">
+        <a href="{{ url_for('chat') }}" class="btn btn-primary">
+            <i class="fas fa-comments"></i> Чат с учителем
+        </a>
+    </div>
+
+    <div class="progress mb-4">
+        <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%;" 
+             aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
+            {{ progress_percentage }}%
+        </div>
+    </div>
+    
     <div class="row">
         <div class="col-md-8">
             <h2 class="mb-3">Доступные уроки</h2>

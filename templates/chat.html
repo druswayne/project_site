@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if is_student %}
+        <h2>Чат с учителем {{ teacher.name }}</h2>
+        
+        <div class="chat-messages mb-4" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px;">
+            {% for message in messages %}
+                <div class="message mb-3 {% if message.sender_id == current_user.id %}text-end{% endif %}">
+                    <div class="message-content {% if message.sender_id == current_user.id %}bg-primary text-white{% else %}bg-light{% endif %} p-2 rounded" style="display: inline-block; max-width: 70%;">
+                        {{ message.message }}
+                    </div>
+                    <div class="message-time small text-muted">
+                        {{ message.created_at.strftime('%H:%M %d.%m.%Y') }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <form action="{{ url_for('send_message') }}" method="POST">
+            <input type="hidden" name="receiver_id" value="{{ teacher.id }}">
+            <div class="input-group">
+                <input type="text" name="message" class="form-control" placeholder="Введите сообщение..." required>
+                <button type="submit" class="btn btn-primary">Отправить</button>
+            </div>
+        </form>
+    {% else %}
+        {% if student %}
+            <h2>Чат со студентом {{ student.name }}</h2>
+            
+            <div class="chat-messages mb-4" style="height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px;">
+                {% for message in messages %}
+                    <div class="message mb-3 {% if message.sender_id == current_user.id %}text-end{% endif %}">
+                        <div class="message-content {% if message.sender_id == current_user.id %}bg-primary text-white{% else %}bg-light{% endif %} p-2 rounded" style="display: inline-block; max-width: 70%;">
+                            {{ message.message }}
+                        </div>
+                        <div class="message-time small text-muted">
+                            {{ message.created_at.strftime('%H:%M %d.%m.%Y') }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <form action="{{ url_for('send_message') }}" method="POST">
+                <input type="hidden" name="receiver_id" value="{{ student.id }}">
+                <div class="input-group">
+                    <input type="text" name="message" class="form-control" placeholder="Введите сообщение..." required>
+                    <button type="submit" class="btn btn-primary">Отправить</button>
+                </div>
+            </form>
+        {% else %}
+            <h2>Мои студенты</h2>
+            <div class="list-group">
+                {% for student in students %}
+                    <a href="{{ url_for('chat_with_student', student_id=student.id) }}" class="list-group-item list-group-item-action">
+                        {{ student.name }}
+                        {% set unread = student.received_messages|selectattr('is_read', 'equalto', false)|list|length %}
+                        {% if unread > 0 %}
+                            <span class="badge bg-danger float-end">{{ unread }}</span>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<script>
+    // Автоматическая прокрутка к последнему сообщению
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatMessages = document.querySelector('.chat-messages');
+        if (chatMessages) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    });
+</script>
+{% endblock %} 

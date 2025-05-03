@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Создание курса{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h2 class="mb-0">Создание нового курса</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название курса</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ title or '' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Описание курса</label>
+                            <textarea class="form-control" id="description" name="description" rows="4">{{ description or '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Создать курс</button>
+                            <a href="{{ url_for('course_list') }}" class="btn btn-outline-secondary">Отмена</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
