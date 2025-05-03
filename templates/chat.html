@@ -17,7 +17,16 @@
                     {% for message in messages %}
                         <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
                             <div class="message-content">
-                                <p>{{ message.message }}</p>
+                                {% set lines = message.message.split('\n') %}
+                                {% for line in lines %}
+                                    {% if line.startswith('Посмотреть задачу: ') %}
+                                        {% set url = line.replace('Посмотреть задачу: ', '') %}
+                                        <a href="{{ url }}" target="_blank">посмотреть задачу</a>
+                                    {% else %}
+                                        <span>{{ line }}</span>
+                                    {% endif %}
+                                    <br>
+                                {% endfor %}
                                 <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
                             </div>
                         </div>
@@ -41,7 +50,7 @@
                         {% for message in messages %}
                             <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
                                 <div class="message-content">
-                                    <p>{{ message.message }}</p>
+                                    <p>{{ message.message | urlize(target='_blank') | safe }}</p>
                                     <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
                                 </div>
                             </div>

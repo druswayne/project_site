@@ -2198,11 +2198,12 @@ def add_solution_comment(solution_id):
     db.session.add(comment)
     db.session.commit()
     
-    # Отправка сообщения в чат студенту
+    # Отправка сообщения в чат студенту с ссылкой на задачу
+    task_url = url_for('view_practice_task', lesson_id=task.lesson_id, task_id=task.id, _external=True)
     chat_message = ChatMessage(
         sender_id=current_user.id,
         receiver_id=solution.user_id,
-        message=f'Ваше решение задачи прокомментировано: {comment_text}',
+        message=f'Ваше решение задачи прокомментировано: {comment_text}\nПосмотреть задачу: {task_url}',
         created_at=datetime.now(),
         is_read=False
     )
