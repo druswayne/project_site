@@ -1739,8 +1739,9 @@ def solve_task(task_id):
         for test in task.tests:
             try:
                 # Создаем временный файл с кодом пользователя
-                with open('temp.py', 'w', encoding='utf-8') as f:
-                    f.write(user_code)
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
+                    temp_file.write(user_code)
+                    temp_file_path = temp_file.name
                 
                 # Создаем строку для вызова функции с аргументами
                 function_call = f"print({task.function_name}({test.input_data}))"
@@ -1783,8 +1784,7 @@ def solve_task(task_id):
             
             finally:
                 # Удаляем временный файл
-                if os.path.exists('temp.py'):
-                    os.remove('temp.py')
+                os.remove(temp_file_path)
         
         # Проверяем, все ли тесты пройдены
         all_tests_passed = all(r['is_correct'] for r in results)
@@ -1839,8 +1839,9 @@ def run_tests():
     for test in task.tests:
         try:
             # Создаем временный файл с кодом пользователя
-            with open('temp.py', 'w', encoding='utf-8') as f:
-                f.write(code)
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
+                temp_file.write(code)
+                temp_file_path = temp_file.name
             
             # Парсим входные данные из JSON
             input_data = json.loads(test.input_data)
@@ -1925,8 +1926,9 @@ def submit_solution():
     all_tests_passed = True
     for test in task.tests:
         try:
-            with open('temp.py', 'w', encoding='utf-8') as f:
-                f.write(code)
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
+                temp_file.write(code)
+                temp_file_path = temp_file.name
             
             function_call = f"print({task.function_name}({test.input_data}))"
             
@@ -1944,8 +1946,7 @@ def submit_solution():
                 break
                 
         finally:
-            if os.path.exists('temp.py'):
-                os.remove('temp.py')
+            os.remove(temp_file_path)
     
     # Сохраняем решение
     solution = Solution(
