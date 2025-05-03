@@ -2177,7 +2177,7 @@ def view_user_lesson_details(user_id, lesson_id):
 
 @app.route('/admin/solution/<int:solution_id>/comment', methods=['POST'])
 @login_required
-@admin_required
+@teacher_required
 def add_solution_comment(solution_id):
     solution = Solution.query.get_or_404(solution_id)
     task = PracticeTask.query.get_or_404(solution.task_id)
@@ -2196,6 +2196,17 @@ def add_solution_comment(solution_id):
     )
     
     db.session.add(comment)
+    db.session.commit()
+    
+    # Отправка сообщения в чат студенту
+    chat_message = ChatMessage(
+        sender_id=current_user.id,
+        receiver_id=solution.user_id,
+        message=f'Ваше решение задачи прокомментировано: {comment_text}',
+        created_at=datetime.now(),
+        is_read=False
+    )
+    db.session.add(chat_message)
     db.session.commit()
     
     flash('Комментарий добавлен', 'success')

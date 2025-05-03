@@ -5,6 +5,11 @@
 {% block content %}
 <div class="container mt-4">
     {% if is_student %}
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary mb-3">← Назад</a>
+    {% else %}
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary mb-3">← Назад</a>
+    {% endif %}
+    {% if is_student %}
         <h1 class="mb-4">Чат с учителем</h1>
         <div class="card">
             <div class="card-body">
