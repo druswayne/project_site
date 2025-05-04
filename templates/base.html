@@ -27,20 +27,6 @@
             --cyber-text-dark: #333333;
             --cyber-info: #ff00ff;
         }
-        
-        /* Переменные для нейтральной темы */
-        :root[data-theme="neutral"] {
-            --cyber-primary: #4a6fa5;
-            --cyber-secondary: #6c757d;
-            --cyber-dark: #f8f9fa;
-            --cyber-bg: #ffffff;
-            --cyber-text: #212529;
-            --cyber-text-light: #343a40;
-            --cyber-text-muted: #6c757d;
-            --cyber-card-bg: #f8f9fa;
-            --cyber-text-dark: #212529;
-            --cyber-info: #17a2b8;
-        }
 
         /* Переменные для классической темы */
         :root[data-theme="classic"] {
@@ -875,28 +861,18 @@
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
             <li>
                 <a class="dropdown-item" href="#" onclick="setTheme('cyberpunk')">
-                    <span class="theme-icon"><i class="fa-solid fa-robot"></i></span>
                     <span class="theme-name">Киберпанк</span>
                     <span class="theme-check"><i class="fa-solid fa-check"></i></span>
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="#" onclick="setTheme('neutral')">
-                    <span class="theme-icon"><i class="fa-solid fa-palette"></i></span>
-                    <span class="theme-name">Нейтральная</span>
-                    <span class="theme-check"><i class="fa-solid fa-check"></i></span>
-                </a>
-            </li>
-            <li>
                 <a class="dropdown-item" href="#" onclick="setTheme('classic')">
-                    <span class="theme-icon"><i class="fa-solid fa-book"></i></span>
                     <span class="theme-name">Классическая</span>
                     <span class="theme-check"><i class="fa-solid fa-check"></i></span>
                 </a>
             </li>
             <li>
                 <a class="dropdown-item" href="#" onclick="setTheme('dark')">
-                    <span class="theme-icon"><i class="fa-solid fa-moon"></i></span>
                     <span class="theme-name">Темная</span>
                     <span class="theme-check"><i class="fa-solid fa-check"></i></span>
                 </a>
@@ -909,7 +885,7 @@
     <script>
         // Загрузка темы
         document.addEventListener('DOMContentLoaded', function() {
-            const theme = localStorage.getItem('theme') || 'cyberpunk';
+            const theme = localStorage.getItem('theme') || 'classic';
             document.documentElement.setAttribute('data-theme', theme);
             document.body.classList.add('theme-loaded');
             
