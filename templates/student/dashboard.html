@@ -35,42 +35,44 @@
             <h2 class="mb-3">Доступные уроки</h2>
             
             {% if lessons %}
-                <div class="list-group">
-                    {% for lesson in lessons %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="mb-1 {% if lesson.id in completed_lesson_ids %}text-success{% endif %}">
-                                        {{ lesson.title }}
-                                        {% if lesson.id in completed_lesson_ids %}
-                                            <i class="bi bi-check-circle-fill text-success"></i>
-                                        {% endif %}
-                                    </h5>
-                                    <p class="mb-1">{{ lesson.description }}</p>
-                                    <small class="text-muted">
-                                        {% if lesson.required_lesson_id %}
-                                            Требуется пройти предыдущий урок
-                                        {% endif %}
-                                    </small>
-                                </div>
-                                <div>
-                                    {% if lesson.can_access %}
-                                        <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">
+                <div style="height: 500px; overflow-y: auto; border: 1px solid var(--cyber-primary); border-radius: 5px; padding: 10px;">
+                    <div class="list-group">
+                        {% for lesson in lessons %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1 {% if lesson.id in completed_lesson_ids %}text-success{% endif %}">
+                                            {{ lesson.title }}
                                             {% if lesson.id in completed_lesson_ids %}
-                                                Повторить урок
-                                            {% else %}
-                                                Пройти урок
+                                                <i class="bi bi-check-circle-fill text-success"></i>
                                             {% endif %}
-                                        </a>
-                                    {% else %}
-                                        <button class="btn btn-secondary" disabled>
-                                            Недоступно
-                                        </button>
-                                    {% endif %}
+                                        </h5>
+                                        <p class="mb-1">{{ lesson.description }}</p>
+                                        <small class="text-muted">
+                                            {% if lesson.required_lesson_id %}
+                                                Требуется пройти предыдущий урок
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        {% if lesson.can_access %}
+                                            <a href="{{ url_for('view_student_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                                {% if lesson.id in completed_lesson_ids %}
+                                                    Повторить урок
+                                                {% else %}
+                                                    Пройти урок
+                                                {% endif %}
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-secondary" disabled>
+                                                Недоступно
+                                            </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 </div>
             {% else %}
                 <div class="alert alert-info">
