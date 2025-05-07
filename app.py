@@ -18,6 +18,8 @@ import tempfile
 import psutil
 import json
 
+concurrent_path = os.path.dirname(__file__)
+os.chdir(concurrent_path)
 load_dotenv()
 
 # Список запрещенных модулей и функций
@@ -2247,4 +2249,4 @@ if __name__ == '__main__':
         create_superadmin()
         # Создаем преподавателя, если его нет
         create_teacher()
-    socketio.run(app, debug=True, port=4444,allow_unsafe_werkzeug=True)
+    socketio.run(app)
