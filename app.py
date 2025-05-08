@@ -100,6 +100,11 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 class ChatMessage(db.Model):
+    __table_args__ = (
+        db.Index('idx_chat_sender_receiver', 'sender_id', 'receiver_id'),
+        db.Index('idx_chat_created_at', 'created_at'),
+        db.Index('idx_chat_is_read', 'is_read'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -379,16 +384,17 @@ def chat():
             flash('У вас нет назначенного учителя', 'warning')
             return redirect(url_for('student_dashboard'))
         
-        # Получаем сообщения
+        # Оптимизированный запрос с лимитом и индексами
         messages = ChatMessage.query.filter(
             ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == teacher.id)) |
             ((ChatMessage.sender_id == teacher.id) & (ChatMessage.receiver_id == current_user.id))
-        ).order_by(ChatMessage.created_at).all()
+        ).order_by(ChatMessage.created_at.desc()).limit(50).all()
         
-        # Помечаем сообщения как прочитанные
-        for message in messages:
-            if message.receiver_id == current_user.id and not message.is_read:
-                message.is_read = True
+        # Помечаем сообщения как прочитанные одним запросом
+        ChatMessage.query.filter(
+            ChatMessage.receiver_id == current_user.id,
+            ChatMessage.is_read == False
+        ).update({'is_read': True})
         db.session.commit()
         
         return render_template('chat.html', 
@@ -2243,24 +2249,19 @@ def complete_theory(lesson_id):
 
 if __name__ == '__main__':
     with app.app_context():
-        # Создаем таблицы, если они не существуют
         db.create_all()
-        # Создаем супер-админа, если его нет
         create_superadmin()
-        # Создаем преподавателя, если его нет
         create_teacher()
+    
     import eventlet
     eventlet.monkey_patch()
-    import eventlet
-
-    eventlet.monkey_patch()
-
+    
     # Настройки для оптимизации производительности
-    socketio.run(app,
-                 host='0.0.0.0',
-                 port=8080,
-                 debug=False,  # Отключаем debug в production
-                 use_reloader=False,  # Отключаем автоперезагрузку
-                 async_mode='eventlet',
-                 ping_timeout=60,
-                 ping_interval=25)
+    socketio.run(app, 
+                host='0.0.0.0', 
+                port=8000,
+                debug=False,  # Отключаем debug в production
+                use_reloader=False,  # Отключаем автоперезагрузку
+                async_mode='eventlet',
+                ping_timeout=60,
+                ping_interval=25)
