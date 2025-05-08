@@ -2251,4 +2251,16 @@ if __name__ == '__main__':
         create_teacher()
     import eventlet
     eventlet.monkey_patch()
-    socketio.run(app,host='0.0.0.0', port=8080)
+    import eventlet
+
+    eventlet.monkey_patch()
+
+    # Настройки для оптимизации производительности
+    socketio.run(app,
+                 host='0.0.0.0',
+                 port=8080,
+                 debug=False,  # Отключаем debug в production
+                 use_reloader=False,  # Отключаем автоперезагрузку
+                 async_mode='eventlet',
+                 ping_timeout=60,
+                 ping_interval=25)
