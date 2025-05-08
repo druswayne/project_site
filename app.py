@@ -2249,4 +2249,6 @@ if __name__ == '__main__':
         create_superadmin()
         # Создаем преподавателя, если его нет
         create_teacher()
+    import eventlet
+    eventlet.monkey_patch()
     socketio.run(app,host='0.0.0.0', port=8080)
