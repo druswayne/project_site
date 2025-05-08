@@ -2249,4 +2249,4 @@ if __name__ == '__main__':
         create_superadmin()
         # Создаем преподавателя, если его нет
         create_teacher()
-    socketio.run(app)
+    socketio.run(app,debug=True, allow_unsafe_werkzeug=True)
