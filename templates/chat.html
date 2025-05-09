@@ -18,7 +18,7 @@
                                 {% for line in lines %}
                                     {% if line.startswith('Посмотреть задачу: ') %}
                                         {% set url = line.replace('Посмотреть задачу: ', '') %}
-                                        <a href="{{ url }}" target="_blank">посмотреть задачу</a>
+                                        <a href="{{ url }}" target="_blank">подробнее</a>
                                     {% else %}
                                         <span>{{ line }}</span>
                                     {% endif %}
@@ -48,7 +48,16 @@
                             {% for message in messages %}
                                 <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
                                     <div class="message-content">
-                                        <p>{{ message.message | urlize(target='_blank') | safe }}</p>
+                                        {% set lines = message.message.split('\n') %}
+                                        {% for line in lines %}
+                                            {% if line.startswith('Посмотреть задачу: ') %}
+                                                {% set url = line.replace('Посмотреть задачу: ', '') %}
+                                                <a href="{{ url }}" target="_blank">подробнее</a>
+                                            {% else %}
+                                                <span>{{ line }}</span>
+                                            {% endif %}
+                                            <br>
+                                        {% endfor %}
                                         <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
                                     </div>
                                 </div>
@@ -209,14 +218,26 @@
         if (isLoadMore) {
             // При подгрузке старых сообщений добавляем их в начало
             const existingMessages = chatContainer.innerHTML;
-            const newMessages = messages.map(msg => `
-                <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
-                    <div class="message-content">
-                        <p>${msg.message}</p>
-                        <small class="text-muted">${msg.created_at}</small>
+            const newMessages = messages.map(msg => {
+                const lines = msg.message.split('\n');
+                const formattedLines = lines.map(line => {
+                    if (line.startsWith('Посмотреть задачу: ')) {
+                        const url = line.replace('Посмотреть задачу: ', '');
+                        return `<a href="${url}" target="_blank">подробнее</a>`;
+                    }
+                    return `<span>${line}</span>`;
+                }).join('<br>');
+                
+                return `
+                    <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
+                        <div class="message-content">
+                            ${formattedLines}
+                            <small class="text-muted">${msg.created_at}</small>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+            
             chatContainer.innerHTML = newMessages + existingMessages;
             
             // Сохраняем позицию прокрутки
@@ -225,14 +246,25 @@
             chatContainer.scrollTop = oldScrollTop + scrollDiff;
         } else {
             // При обновлении заменяем все сообщения
-            chatContainer.innerHTML = messages.map(msg => `
-                <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
-                    <div class="message-content">
-                        <p>${msg.message}</p>
-                        <small class="text-muted">${msg.created_at}</small>
+            chatContainer.innerHTML = messages.map(msg => {
+                const lines = msg.message.split('\n');
+                const formattedLines = lines.map(line => {
+                    if (line.startsWith('Посмотреть задачу: ')) {
+                        const url = line.replace('Посмотреть задачу: ', '');
+                        return `<a href="${url}" target="_blank">подробнее</a>`;
+                    }
+                    return `<span>${line}</span>`;
+                }).join('<br>');
+                
+                return `
+                    <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
+                        <div class="message-content">
+                            ${formattedLines}
+                            <small class="text-muted">${msg.created_at}</small>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             // Прокручиваем вниз если пользователь был внизу
             if (wasScrolledToBottom) {
@@ -245,11 +277,20 @@
         const chatContainer = document.getElementById('messages');
         const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100;
         
+        const lines = message.message.split('\n');
+        const formattedLines = lines.map(line => {
+            if (line.startsWith('Посмотреть задачу: ')) {
+                const url = line.replace('Посмотреть задачу: ', '');
+                return `<a href="${url}" target="_blank">подробнее</a>`;
+            }
+            return `<span>${line}</span>`;
+        }).join('<br>');
+        
         const messageElement = document.createElement('div');
         messageElement.className = `message ${message.sender_id === currentUserId ? 'sent' : 'received'}`;
         messageElement.innerHTML = `
             <div class="message-content">
-                <p>${message.message}</p>
+                ${formattedLines}
                 <small class="text-muted">${message.created_at}</small>
             </div>
         `;
