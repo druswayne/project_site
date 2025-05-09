@@ -157,6 +157,9 @@
                 document.getElementById('message-input').value = '';
                 // Обновляем сообщения сразу после отправки
                 updateChatMessages();
+                // Принудительно прокручиваем вниз после отправки
+                const chatContainer = document.getElementById('messages');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         })
         .catch(error => console.error('Ошибка при отправке сообщения:', error));
@@ -166,7 +169,7 @@
         const chatContainer = document.getElementById('messages');
         const oldScrollHeight = chatContainer.scrollHeight;
         const oldScrollTop = chatContainer.scrollTop;
-        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop === chatContainer.clientHeight;
+        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100; // Добавляем небольшой запас
         
         // Сортируем сообщения по времени (от старых к новым)
         messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -181,7 +184,7 @@
             </div>
         `).join('');
         
-        // Восстанавливаем позицию прокрутки
+        // Прокручиваем вниз если пользователь был внизу или если это обновление после отправки
         if (wasScrolledToBottom) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         } else {
@@ -194,7 +197,7 @@
 
     function appendMessage(message) {
         const chatContainer = document.getElementById('messages');
-        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop === chatContainer.clientHeight;
+        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100; // Добавляем небольшой запас
         
         const messageElement = document.createElement('div');
         messageElement.className = `message ${message.sender_id === currentUserId ? 'sent' : 'received'}`;
@@ -206,7 +209,7 @@
         `;
         chatContainer.appendChild(messageElement);
         
-        // Прокручиваем вниз только если пользователь уже был внизу
+        // Прокручиваем вниз если пользователь был внизу
         if (wasScrolledToBottom) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
