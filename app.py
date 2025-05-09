@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, abo
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
-from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import signal
@@ -94,7 +93,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-socketio = SocketIO(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -425,21 +423,34 @@ def chat():
     
     return redirect(url_for('index'))
 
-@app.route('/chat/<int:student_id>')
+@app.route('/chat/messages')
 @login_required
-@teacher_required
-def chat_with_student(student_id):
-    student = User.query.get_or_404(student_id)
-    
-    # Проверяем, что студент действительно создан текущим учителем
-    if student.created_by != current_user.id:
-        abort(403)
-    
-    # Получаем сообщения
-    messages = ChatMessage.query.filter(
-        ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == student.id)) |
-        ((ChatMessage.sender_id == student.id) & (ChatMessage.receiver_id == current_user.id))
-    ).order_by(ChatMessage.created_at).all()
+def get_chat_messages():
+    if current_user.is_student():
+        # Для студентов получаем сообщения с их учителем
+        teacher = User.query.get(current_user.created_by)
+        if not teacher:
+            return jsonify({'error': 'Учитель не найден'}), 404
+            
+        messages = ChatMessage.query.filter(
+            ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == teacher.id)) |
+            ((ChatMessage.sender_id == teacher.id) & (ChatMessage.receiver_id == current_user.id))
+        ).order_by(ChatMessage.created_at.desc()).limit(50).all()
+        
+    elif current_user.is_teacher():
+        # Для учителей получаем сообщения с выбранным студентом
+        student_id = request.args.get('student_id', type=int)
+        if not student_id:
+            return jsonify({'error': 'ID студента не указан'}), 400
+            
+        student = User.query.get(student_id)
+        if not student or student.created_by != current_user.id:
+            return jsonify({'error': 'Студент не найден'}), 404
+            
+        messages = ChatMessage.query.filter(
+            ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == student_id)) |
+            ((ChatMessage.sender_id == student_id) & (ChatMessage.receiver_id == current_user.id))
+        ).order_by(ChatMessage.created_at.desc()).limit(50).all()
     
     # Помечаем сообщения как прочитанные
     for message in messages:
@@ -447,52 +458,36 @@ def chat_with_student(student_id):
             message.is_read = True
     db.session.commit()
     
-    return render_template('chat.html', 
-                         messages=messages, 
-                         student=student,
-                         is_student=False)
+    return jsonify({
+        'messages': [{
+            'id': msg.id,
+            'sender_id': msg.sender_id,
+            'receiver_id': msg.receiver_id,
+            'message': msg.message,
+            'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'is_read': msg.is_read
+        } for msg in messages]
+    })
 
-@socketio.on('connect')
-def handle_connect():
-    if current_user.is_authenticated:
-        # Присоединяем пользователя к его персональной комнате
-        join_room(f'user_{current_user.id}')
-        if current_user.is_student():
-            # Студенты также присоединяются к комнате своего учителя
-            teacher = User.query.get(current_user.created_by)
-            if teacher:
-                join_room(f'user_{teacher.id}')
-        elif current_user.is_teacher():
-            # Учителя присоединяются к комнатам своих студентов
-            students = User.query.filter_by(created_by=current_user.id, user_type='student').all()
-            for student in students:
-                join_room(f'user_{student.id}')
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    if current_user.is_authenticated:
-        leave_room(f'user_{current_user.id}')
-
-@socketio.on('send_message')
-def handle_send_message(data):
-    if not current_user.is_authenticated:
-        return
-    
+@app.route('/chat/send', methods=['POST'])
+@login_required
+def send_chat_message():
+    data = request.get_json()
     receiver_id = data.get('receiver_id')
     message_text = data.get('message')
     
     if not receiver_id or not message_text:
-        return
+        return jsonify({'error': 'Неверные данные'}), 400
     
     receiver = User.query.get_or_404(receiver_id)
     
-    # Проверяем права на отправку сообщения
+    # Проверяем права на отправку
     if current_user.is_student():
         if receiver.id != current_user.created_by:
-            return
+            return jsonify({'error': 'Нет прав на отправку'}), 403
     elif current_user.is_teacher():
         if receiver.created_by != current_user.id:
-            return
+            return jsonify({'error': 'Нет прав на отправку'}), 403
     
     # Создаем новое сообщение
     message = ChatMessage(
@@ -504,27 +499,17 @@ def handle_send_message(data):
     db.session.add(message)
     db.session.commit()
     
-    # Отправляем сообщение получателю
-    emit('new_message', {
-        'id': message.id,
-        'sender_id': message.sender_id,
-        'receiver_id': message.receiver_id,
-        'message': message.message,
-        'created_at': message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        'is_read': message.is_read
-    }, room=f'user_{receiver.id}')
-
-@socketio.on('mark_as_read')
-def handle_mark_as_read(message_id):
-    if not current_user.is_authenticated:
-        return
-    
-    message = ChatMessage.query.get_or_404(message_id)
-    if message.receiver_id != current_user.id:
-        return
-    
-    message.is_read = True
-    db.session.commit()
+    return jsonify({
+        'success': True,
+        'message': {
+            'id': message.id,
+            'sender_id': message.sender_id,
+            'receiver_id': message.receiver_id,
+            'message': message.message,
+            'created_at': message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'is_read': message.is_read
+        }
+    })
 
 @app.route('/student/lesson/<int:lesson_id>')
 @login_required
@@ -2253,15 +2238,4 @@ if __name__ == '__main__':
         create_superadmin()
         create_teacher()
     
-    import eventlet
-    eventlet.monkey_patch()
-    
-    # Настройки для оптимизации производительности
-    socketio.run(app, 
-                host='0.0.0.0', 
-                port=8000,
-                debug=False,  # Отключаем debug в production
-                use_reloader=False,  # Отключаем автоперезагрузку
-                async_mode='eventlet',
-                ping_timeout=60,
-                ping_interval=25)
+    app.run(host='0.0.0.0', port=8000, debug=False)

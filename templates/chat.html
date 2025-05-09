@@ -4,11 +4,8 @@
 
 {% block content %}
 <div class="container mt-4">
-    {% if is_student %}
-        <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary mb-3">← Назад</a>
-    {% else %}
-        <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary mb-3">← Назад</a>
-    {% endif %}
+    <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary mb-3">← Назад</a>
+    
     {% if is_student %}
         <h1 class="mb-4">Чат с учителем</h1>
         <div class="card">
@@ -42,107 +39,255 @@
             </div>
         </div>
     {% else %}
-        {% if student %}
-            <h1 class="mb-4">Чат со студентом {{ student.name }}</h1>
-            <div class="card">
-                <div class="card-body">
-                    <div id="messages" class="messages mb-3" style="height: 400px; overflow-y: auto;">
-                        {% for message in messages %}
-                            <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
-                                <div class="message-content">
-                                    <p>{{ message.message | urlize(target='_blank') | safe }}</p>
-                                    <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+        <div id="chat-container">
+            {% if student %}
+                <h1 class="mb-4">Чат со студентом {{ student.name }}</h1>
+                <div class="card">
+                    <div class="card-body">
+                        <div id="messages" class="messages mb-3" style="height: 400px; overflow-y: auto;">
+                            {% for message in messages %}
+                                <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                                    <div class="message-content">
+                                        <p>{{ message.message | urlize(target='_blank') | safe }}</p>
+                                        <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                    </div>
                                 </div>
+                            {% endfor %}
+                        </div>
+                        <form id="message-form" class="mt-3">
+                            <input type="hidden" id="receiver_id" value="{{ student.id }}">
+                            <div class="input-group">
+                                <input type="text" id="message-input" class="form-control" placeholder="Введите сообщение...">
+                                <button type="submit" class="btn btn-primary">Отправить</button>
                             </div>
-                        {% endfor %}
+                        </form>
                     </div>
-                    <form id="message-form" class="mt-3">
-                        <input type="hidden" id="receiver_id" value="{{ student.id }}">
-                        <div class="input-group">
-                            <input type="text" id="message-input" class="form-control" placeholder="Введите сообщение...">
-                            <button type="submit" class="btn btn-primary">Отправить</button>
-                        </div>
-                    </form>
                 </div>
-            </div>
-        {% else %}
-            <h1 class="mb-4">Мои студенты</h1>
-            <div class="list-group">
-                {% for student in students %}
-                    <a href="{{ url_for('chat_with_student', student_id=student.id) }}" class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h5 class="mb-1">{{ student.name }}</h5>
-                                <p class="mb-1">{{ student.email }}</p>
-                            </div>
-                            {% if student.unread_count > 0 %}
-                                <div class="d-flex align-items-center">
-                                    <span class="badge bg-danger rounded-pill me-2">{{ student.unread_count }}</span>
-                                    <i class="bi bi-envelope-fill text-danger"></i>
+            {% else %}
+                <h1 class="mb-4">Мои студенты</h1>
+                <div class="list-group">
+                    {% for student in students %}
+                        <a href="#" class="list-group-item list-group-item-action student-chat-link" data-student-id="{{ student.id }}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1">{{ student.name }}</h5>
+                                    <p class="mb-1">{{ student.email }}</p>
                                 </div>
-                            {% endif %}
-                        </div>
-                    </a>
-                {% endfor %}
-            </div>
-        {% endif %}
+                                {% if student.unread_count > 0 %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-danger rounded-pill me-2">{{ student.unread_count }}</span>
+                                        <i class="bi bi-envelope-fill text-danger"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
     {% endif %}
 </div>
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script>
-    const socket = io();
-    
-    // Функция для добавления нового сообщения в чат
-    function addMessage(message, isSent, timestamp) {
-        const messagesDiv = document.getElementById('messages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+    let chatUpdateInterval;
+    let currentReceiverId = null;
+    const currentUserId = {{ current_user.id }};
+    const isTeacher = {{ 'true' if not is_student else 'false' }};
+
+    function startChatUpdates(receiverId) {
+        currentReceiverId = receiverId;
+        // Останавливаем предыдущий интервал, если он был
+        if (chatUpdateInterval) {
+            clearInterval(chatUpdateInterval);
+        }
         
-        messageDiv.innerHTML = `
+        // Загружаем сообщения сразу
+        updateChatMessages();
+        
+        // Устанавливаем интервал обновления
+        chatUpdateInterval = setInterval(updateChatMessages, 10000);
+    }
+
+    function stopChatUpdates() {
+        if (chatUpdateInterval) {
+            clearInterval(chatUpdateInterval);
+            chatUpdateInterval = null;
+        }
+        currentReceiverId = null;
+    }
+
+    function updateChatMessages() {
+        if (!currentReceiverId) return;
+        
+        let url = '/chat/messages';
+        if (isTeacher) {
+            url += `?student_id=${currentReceiverId}`;
+        }
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.messages) {
+                    updateChatUI(data.messages);
+                }
+            })
+            .catch(error => console.error('Ошибка при обновлении чата:', error));
+    }
+
+    function sendMessage(messageText) {
+        if (!currentReceiverId || !messageText) return;
+        
+        fetch('/chat/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                receiver_id: currentReceiverId,
+                message: messageText
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Добавляем новое сообщение в UI
+                appendMessage(data.message);
+                // Очищаем поле ввода
+                document.getElementById('message-input').value = '';
+                // Обновляем сообщения сразу после отправки
+                updateChatMessages();
+            }
+        })
+        .catch(error => console.error('Ошибка при отправке сообщения:', error));
+    }
+
+    function updateChatUI(messages) {
+        const chatContainer = document.getElementById('messages');
+        const oldScrollHeight = chatContainer.scrollHeight;
+        const oldScrollTop = chatContainer.scrollTop;
+        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop === chatContainer.clientHeight;
+        
+        // Сортируем сообщения по времени (от старых к новым)
+        messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        
+        // Обновляем сообщения
+        chatContainer.innerHTML = messages.map(msg => `
+            <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
+                <div class="message-content">
+                    <p>${msg.message}</p>
+                    <small class="text-muted">${msg.created_at}</small>
+                </div>
+            </div>
+        `).join('');
+        
+        // Восстанавливаем позицию прокрутки
+        if (wasScrolledToBottom) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } else {
+            // Если пользователь просматривал историю, сохраняем относительную позицию
+            const newScrollHeight = chatContainer.scrollHeight;
+            const scrollDiff = newScrollHeight - oldScrollHeight;
+            chatContainer.scrollTop = oldScrollTop + scrollDiff;
+        }
+    }
+
+    function appendMessage(message) {
+        const chatContainer = document.getElementById('messages');
+        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop === chatContainer.clientHeight;
+        
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${message.sender_id === currentUserId ? 'sent' : 'received'}`;
+        messageElement.innerHTML = `
             <div class="message-content">
-                <p>${message}</p>
-                <small class="text-muted">${timestamp}</small>
+                <p>${message.message}</p>
+                <small class="text-muted">${message.created_at}</small>
             </div>
         `;
+        chatContainer.appendChild(messageElement);
         
-        messagesDiv.appendChild(messageDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        // Прокручиваем вниз только если пользователь уже был внизу
+        if (wasScrolledToBottom) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
     }
-    
-    // Обработка отправки сообщения
-    document.getElementById('message-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const messageInput = document.getElementById('message-input');
-        const receiverId = document.getElementById('receiver_id').value;
-        const message = messageInput.value.trim();
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        // Для студентов сразу начинаем обновление с их учителем
+        if (!isTeacher) {
+            const teacherId = document.getElementById('receiver_id').value;
+            startChatUpdates(teacherId);
+        }
         
-        if (message) {
-            socket.emit('send_message', {
-                receiver_id: receiverId,
-                message: message
+        // Прокручиваем чат вниз при первой загрузке
+        const chatContainer = document.getElementById('messages');
+        if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Обработчик отправки сообщения
+        document.getElementById('message-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const messageInput = document.getElementById('message-input');
+            const messageText = messageInput.value.trim();
+            if (messageText) {
+                sendMessage(messageText);
+            }
+        });
+    });
+
+    // Для учителей добавляем обработчик выбора студента
+    if (isTeacher) {
+        document.querySelectorAll('.student-chat-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const studentId = this.dataset.studentId;
+                const studentName = this.querySelector('h5').textContent;
+                
+                // Загружаем информацию о студенте и его сообщения
+                fetch(`/chat/messages?student_id=${studentId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.messages) {
+                            // Обновляем содержимое контейнера чата
+                            document.getElementById('chat-container').innerHTML = `
+                                <h1 class="mb-4">Чат со студентом ${studentName}</h1>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div id="messages" class="messages mb-3" style="height: 400px; overflow-y: auto;"></div>
+                                        <form id="message-form" class="mt-3">
+                                            <input type="hidden" id="receiver_id" value="${studentId}">
+                                            <div class="input-group">
+                                                <input type="text" id="message-input" class="form-control" placeholder="Введите сообщение...">
+                                                <button type="submit" class="btn btn-primary">Отправить</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Обновляем сообщения
+                            updateChatUI(data.messages);
+                            
+                            // Добавляем обработчик отправки сообщений
+                            document.getElementById('message-form').addEventListener('submit', function(e) {
+                                e.preventDefault();
+                                const messageInput = document.getElementById('message-input');
+                                const messageText = messageInput.value.trim();
+                                if (messageText) {
+                                    sendMessage(messageText);
+                                }
+                            });
+                            
+                            // Начинаем обновление чата
+                            startChatUpdates(studentId);
+                        }
+                    })
+                    .catch(error => console.error('Ошибка при загрузке чата:', error));
             });
-            messageInput.value = '';
-        }
-    });
-    
-    // Обработка получения нового сообщения
-    socket.on('new_message', function(data) {
-        const isSent = data.sender_id === {{ current_user.id }};
-        addMessage(data.message, isSent, data.created_at);
-        
-        // Помечаем сообщение как прочитанное
-        if (!isSent) {
-            socket.emit('mark_as_read', data.id);
-        }
-    });
-    
-    // Автоматическая прокрутка к последнему сообщению при загрузке страницы
-    window.onload = function() {
-        const messagesDiv = document.getElementById('messages');
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    };
+        });
+    }
 </script>
 {% endblock %}
 
