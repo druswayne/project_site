@@ -24,7 +24,9 @@
                                     {% endif %}
                                     <br>
                                 {% endfor %}
-                                <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                <div class="message-time">
+                                    <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                </div>
                             </div>
                         </div>
                     {% endfor %}
@@ -58,7 +60,9 @@
                                             {% endif %}
                                             <br>
                                         {% endfor %}
-                                        <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                        <div class="message-time">
+                                            <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                        </div>
                                     </div>
                                 </div>
                             {% endfor %}
@@ -232,7 +236,9 @@
                     <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
                         <div class="message-content">
                             ${formattedLines}
-                            <small class="text-muted">${msg.created_at}</small>
+                            <div class="message-time">
+                                <small class="text-muted">${msg.created_at}</small>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -260,7 +266,9 @@
                     <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
                         <div class="message-content">
                             ${formattedLines}
-                            <small class="text-muted">${msg.created_at}</small>
+                            <div class="message-time">
+                                <small class="text-muted">${msg.created_at}</small>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -291,7 +299,9 @@
         messageElement.innerHTML = `
             <div class="message-content">
                 ${formattedLines}
-                <small class="text-muted">${message.created_at}</small>
+                <div class="message-time">
+                    <small class="text-muted">${message.created_at}</small>
+                </div>
             </div>
         `;
         chatContainer.appendChild(messageElement);
@@ -398,5 +408,11 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+<style>
+    .message-time {
+        margin-top: 5px;
+        font-size: 0.8em;
+    }
+</style>
 {% endblock %}
 {% endblock %} 
