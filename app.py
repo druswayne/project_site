@@ -432,10 +432,21 @@ def get_chat_messages():
         if not teacher:
             return jsonify({'error': 'Учитель не найден'}), 404
             
-        messages = ChatMessage.query.filter(
+        # Получаем параметры пагинации
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        # Получаем сообщения с пагинацией
+        messages_query = ChatMessage.query.filter(
             ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == teacher.id)) |
             ((ChatMessage.sender_id == teacher.id) & (ChatMessage.receiver_id == current_user.id))
-        ).order_by(ChatMessage.created_at.desc()).limit(50).all()
+        ).order_by(ChatMessage.created_at.desc())
+        
+        # Получаем общее количество сообщений
+        total_messages = messages_query.count()
+        
+        # Получаем сообщения для текущей страницы
+        messages = messages_query.offset((page - 1) * per_page).limit(per_page).all()
         
     elif current_user.is_teacher():
         # Для учителей получаем сообщения с выбранным студентом
@@ -446,11 +457,22 @@ def get_chat_messages():
         student = User.query.get(student_id)
         if not student or student.created_by != current_user.id:
             return jsonify({'error': 'Студент не найден'}), 404
-            
-        messages = ChatMessage.query.filter(
+        
+        # Получаем параметры пагинации
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        # Получаем сообщения с пагинацией
+        messages_query = ChatMessage.query.filter(
             ((ChatMessage.sender_id == current_user.id) & (ChatMessage.receiver_id == student_id)) |
             ((ChatMessage.sender_id == student_id) & (ChatMessage.receiver_id == current_user.id))
-        ).order_by(ChatMessage.created_at.desc()).limit(50).all()
+        ).order_by(ChatMessage.created_at.desc())
+        
+        # Получаем общее количество сообщений
+        total_messages = messages_query.count()
+        
+        # Получаем сообщения для текущей страницы
+        messages = messages_query.offset((page - 1) * per_page).limit(per_page).all()
     
     # Помечаем сообщения как прочитанные
     for message in messages:
@@ -466,7 +488,10 @@ def get_chat_messages():
             'message': msg.message,
             'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             'is_read': msg.is_read
-        } for msg in messages]
+        } for msg in messages],
+        'total_messages': total_messages,
+        'current_page': page,
+        'has_more': (page * per_page) < total_messages
     })
 
 @app.route('/chat/send', methods=['POST'])

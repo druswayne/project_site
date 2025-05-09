@@ -94,9 +94,15 @@
     let currentReceiverId = null;
     const currentUserId = {{ current_user.id }};
     const isTeacher = {{ 'true' if not is_student else 'false' }};
+    let currentPage = 1;
+    let isLoading = false;
+    let hasMoreMessages = true;
 
     function startChatUpdates(receiverId) {
         currentReceiverId = receiverId;
+        currentPage = 1;
+        hasMoreMessages = true;
+        
         // Останавливаем предыдущий интервал, если он был
         if (chatUpdateInterval) {
             clearInterval(chatUpdateInterval);
@@ -129,10 +135,36 @@
             .then(response => response.json())
             .then(data => {
                 if (data.messages) {
-                    updateChatUI(data.messages);
+                    updateChatUI(data.messages, false);
                 }
             })
             .catch(error => console.error('Ошибка при обновлении чата:', error));
+    }
+
+    function loadMoreMessages() {
+        if (!currentReceiverId || isLoading || !hasMoreMessages) return;
+        
+        isLoading = true;
+        currentPage++;
+        
+        let url = `/chat/messages?page=${currentPage}`;
+        if (isTeacher) {
+            url += `&student_id=${currentReceiverId}`;
+        }
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.messages) {
+                    hasMoreMessages = data.has_more;
+                    updateChatUI(data.messages, true);
+                }
+                isLoading = false;
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке сообщений:', error);
+                isLoading = false;
+            });
     }
 
     function sendMessage(messageText) {
@@ -165,39 +197,53 @@
         .catch(error => console.error('Ошибка при отправке сообщения:', error));
     }
 
-    function updateChatUI(messages) {
+    function updateChatUI(messages, isLoadMore) {
         const chatContainer = document.getElementById('messages');
         const oldScrollHeight = chatContainer.scrollHeight;
         const oldScrollTop = chatContainer.scrollTop;
-        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100; // Добавляем небольшой запас
+        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100;
         
         // Сортируем сообщения по времени (от старых к новым)
         messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         
-        // Обновляем сообщения
-        chatContainer.innerHTML = messages.map(msg => `
-            <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
-                <div class="message-content">
-                    <p>${msg.message}</p>
-                    <small class="text-muted">${msg.created_at}</small>
+        if (isLoadMore) {
+            // При подгрузке старых сообщений добавляем их в начало
+            const existingMessages = chatContainer.innerHTML;
+            const newMessages = messages.map(msg => `
+                <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
+                    <div class="message-content">
+                        <p>${msg.message}</p>
+                        <small class="text-muted">${msg.created_at}</small>
+                    </div>
                 </div>
-            </div>
-        `).join('');
-        
-        // Прокручиваем вниз если пользователь был внизу или если это обновление после отправки
-        if (wasScrolledToBottom) {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        } else {
-            // Если пользователь просматривал историю, сохраняем относительную позицию
+            `).join('');
+            chatContainer.innerHTML = newMessages + existingMessages;
+            
+            // Сохраняем позицию прокрутки
             const newScrollHeight = chatContainer.scrollHeight;
             const scrollDiff = newScrollHeight - oldScrollHeight;
             chatContainer.scrollTop = oldScrollTop + scrollDiff;
+        } else {
+            // При обновлении заменяем все сообщения
+            chatContainer.innerHTML = messages.map(msg => `
+                <div class="message ${msg.sender_id === currentUserId ? 'sent' : 'received'}">
+                    <div class="message-content">
+                        <p>${msg.message}</p>
+                        <small class="text-muted">${msg.created_at}</small>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Прокручиваем вниз если пользователь был внизу
+            if (wasScrolledToBottom) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
         }
     }
 
     function appendMessage(message) {
         const chatContainer = document.getElementById('messages');
-        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100; // Добавляем небольшой запас
+        const wasScrolledToBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100;
         
         const messageElement = document.createElement('div');
         messageElement.className = `message ${message.sender_id === currentUserId ? 'sent' : 'received'}`;
@@ -227,6 +273,13 @@
         const chatContainer = document.getElementById('messages');
         if (chatContainer) {
             chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Добавляем обработчик прокрутки для подгрузки старых сообщений
+            chatContainer.addEventListener('scroll', function() {
+                if (this.scrollTop === 0 && hasMoreMessages && !isLoading) {
+                    loadMoreMessages();
+                }
+            });
         }
         
         // Обработчик отправки сообщения
@@ -271,7 +324,15 @@
                             `;
                             
                             // Обновляем сообщения
-                            updateChatUI(data.messages);
+                            updateChatUI(data.messages, false);
+                            
+                            // Добавляем обработчик прокрутки для подгрузки старых сообщений
+                            const chatContainer = document.getElementById('messages');
+                            chatContainer.addEventListener('scroll', function() {
+                                if (this.scrollTop === 0 && hasMoreMessages && !isLoading) {
+                                    loadMoreMessages();
+                                }
+                            });
                             
                             // Добавляем обработчик отправки сообщений
                             document.getElementById('message-form').addEventListener('submit', function(e) {
