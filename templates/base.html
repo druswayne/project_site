@@ -757,6 +757,29 @@
         .theme-switch .dropdown-item.active .theme-check {
             opacity: 1;
         }
+
+        /* Стили для мобильной версии */
+        @media (max-width: 991.98px) {
+            .navbar .d-flex {
+                margin-top: 1rem;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .navbar .dropdown {
+                width: 100%;
+            }
+
+            .navbar .dropdown .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .navbar .dropdown-menu {
+                width: 100%;
+                text-align: center;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
