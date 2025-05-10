@@ -115,7 +115,7 @@
         currentReceiverId = receiverId;
         currentPage = 1;
         hasMoreMessages = true;
-        
+    
         // Останавливаем предыдущий интервал, если он был
         if (chatUpdateInterval) {
             clearInterval(chatUpdateInterval);
@@ -331,12 +331,12 @@
                     loadMoreMessages();
                 }
             });
-        }
-        
+    }
+    
         // Обработчик отправки сообщения
-        document.getElementById('message-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const messageInput = document.getElementById('message-input');
+    document.getElementById('message-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const messageInput = document.getElementById('message-input');
             const messageText = messageInput.value.trim();
             if (messageText) {
                 sendMessage(messageText);
@@ -351,7 +351,7 @@
                 e.preventDefault();
                 const studentId = this.dataset.studentId;
                 const studentName = this.querySelector('h5').textContent;
-                
+    
                 // Загружаем информацию о студенте и его сообщения
                 fetch(`/chat/messages?student_id=${studentId}`)
                     .then(response => response.json())
@@ -373,7 +373,7 @@
                                     </div>
                                 </div>
                             `;
-                            
+        
                             // Обновляем сообщения
                             updateChatUI(data.messages, false);
                             
@@ -382,9 +382,9 @@
                             chatContainer.addEventListener('scroll', function() {
                                 if (this.scrollTop === 0 && hasMoreMessages && !isLoading) {
                                     loadMoreMessages();
-                                }
-                            });
-                            
+        }
+    });
+    
                             // Добавляем обработчик отправки сообщений
                             document.getElementById('message-form').addEventListener('submit', function(e) {
                                 e.preventDefault();

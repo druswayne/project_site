@@ -16,6 +16,7 @@ import uuid
 import tempfile
 import psutil
 import json
+import time
 
 concurrent_path = os.path.dirname(__file__)
 os.chdir(concurrent_path)
@@ -58,6 +59,46 @@ def check_code_safety(code):
                 elif isinstance(node.func, ast.Attribute):
                     if node.func.attr in FORBIDDEN_FUNCTIONS:
                         return False, f"Использование функции '{node.func.attr}' запрещено"
+            
+            # Проверка доступа к __builtins__
+            elif isinstance(node, ast.Attribute):
+                if isinstance(node.value, ast.Name) and node.value.id == '__builtins__':
+                    return False, "Доступ к __builtins__ запрещен"
+            
+            # Проверка метапрограммирования
+            elif isinstance(node, ast.ClassDef):
+                if any(base.id == 'type' for base in node.bases if isinstance(base, ast.Name)):
+                    return False, "Метапрограммирование запрещено"
+            
+            # Проверка работы с файлами
+            elif isinstance(node, ast.Call):
+                # Проверка на использование open()
+                if isinstance(node.func, ast.Name) and node.func.id == 'open':
+                    return False, "Использование функции open() запрещено"
+                # Проверка на использование file()
+                elif isinstance(node.func, ast.Name) and node.func.id == 'file':
+                    return False, "Использование функции file() запрещено"
+                # Проверка на использование os.path
+                elif isinstance(node.func, ast.Attribute):
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == 'os':
+                        if node.func.attr in ['open', 'makedirs', 'mkdir', 'remove', 'unlink', 'rmdir', 'removedirs']:
+                            return False, f"Использование os.{node.func.attr}() запрещено"
+                    elif isinstance(node.func.value, ast.Attribute):
+                        if isinstance(node.func.value.value, ast.Name) and node.func.value.value.id == 'os':
+                            if node.func.value.attr == 'path':
+                                if node.func.attr in ['exists', 'isfile', 'isdir', 'getsize', 'getmtime']:
+                                    return False, f"Использование os.path.{node.func.attr}() запрещено"
+            
+            # Проверка конструкции with open
+            elif isinstance(node, ast.With):
+                for item in node.items:
+                    if isinstance(item.context_expr, ast.Call):
+                        if isinstance(item.context_expr.func, ast.Name) and item.context_expr.func.id == 'open':
+                            return False, "Использование конструкции with open() запрещено"
+                        elif isinstance(item.context_expr.func, ast.Attribute):
+                            if isinstance(item.context_expr.func.value, ast.Name) and item.context_expr.func.value.id == 'os':
+                                if item.context_expr.func.attr == 'open':
+                                    return False, "Использование конструкции with os.open() запрещено"
         
         # Проверяем общий размер кода
         if len(code) > 10000:  # Ограничение в 10KB
@@ -1752,6 +1793,16 @@ def solve_task(task_id):
     
     if request.method == 'POST':
         user_code = request.form.get('code')
+        
+        # Проверяем безопасность кода перед выполнением
+        is_safe, message = check_code_safety(user_code)
+        if not is_safe:
+            flash(f'Ошибка безопасности: {message}', 'danger')
+            return render_template('solve_task.html', 
+                                task=task, 
+                                user_code=user_code,
+                                error=message)
+        
         results = []
         
         for test in task.tests:
@@ -1769,7 +1820,13 @@ def solve_task(task_id):
                     ['python', '-c', f"{user_code}\n{function_call}"],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    text=True
+                    text=True,
+                    env={
+                        'PYTHONDONTWRITEBYTECODE': '1',
+                        'PYTHONNOUSERSITE': '1',
+                        'PYTHONUNBUFFERED': '1',
+                        'PYTHONIOENCODING': 'utf-8'
+                    }
                 )
                 
                 # Получаем результат
@@ -1802,7 +1859,11 @@ def solve_task(task_id):
             
             finally:
                 # Удаляем временный файл
-                os.remove(temp_file_path)
+                if 'temp_file_path' in locals():
+                    try:
+                        os.remove(temp_file_path)
+                    except:
+                        pass
         
         # Проверяем, все ли тесты пройдены
         all_tests_passed = all(r['is_correct'] for r in results)
@@ -1827,29 +1888,17 @@ def solve_task(task_id):
     initial_code = last_solution.code if last_solution else task.initial_code
     return render_template('solve_task.html', task=task, user_code=initial_code)
 
-@app.route('/admin/practice-tasks/<int:task_id>/delete', methods=['POST'])
-@login_required
-@admin_required
-def delete_practice_task(task_id):
-    task = PracticeTask.query.get_or_404(task_id)
-    lesson_id = task.lesson_id
-    
-    try:
-        db.session.delete(task)
-        db.session.commit()
-        flash('Задача успешно удалена', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Ошибка при удалении задачи: {str(e)}', 'danger')
-    
-    return redirect(url_for('edit_practice_tasks', lesson_id=lesson_id))
-
 @app.route('/api/run-tests', methods=['POST'])
 @login_required
 def run_tests():
     data = request.get_json()
     code = data.get('code')
     task_id = data.get('task_id')
+    
+    # Проверяем безопасность кода перед выполнением
+    is_safe, message = check_code_safety(code)
+    if not is_safe:
+        return jsonify({'success': False, 'error': message})
     
     task = PracticeTask.query.get_or_404(task_id)
     results = []
@@ -1881,7 +1930,13 @@ def run_tests():
                 ['python', '-c', f"{code}\n{function_call}"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                env={
+                    'PYTHONDONTWRITEBYTECODE': '1',
+                    'PYTHONNOUSERSITE': '1',
+                    'PYTHONUNBUFFERED': '1',
+                    'PYTHONIOENCODING': 'utf-8'
+                }
             )
             
             try:
@@ -1991,8 +2046,13 @@ def submit_solution():
 
 def run_tests(code, task_id):
     try:
-        # Создаем временную директорию для этого запуска
-        temp_dir = tempfile.mkdtemp()
+        # Проверяем безопасность кода перед выполнением
+        is_safe, message = check_code_safety(code)
+        if not is_safe:
+            return {'success': False, 'error': message}
+            
+        # Создаем уникальную временную директорию для этого запуска
+        temp_dir = tempfile.mkdtemp(prefix=f'test_{uuid.uuid4()}_')
         temp_file = os.path.join(temp_dir, f'test_{uuid.uuid4()}.py')
         
         # Записываем код в файл
@@ -2015,28 +2075,68 @@ def run_tests(code, task_id):
                 with open(test_file, 'w', encoding='utf-8') as f:
                     f.write(code + '\n\n' + test['test_code'])
                 
-                # Запускаем тест с ограничением времени (5 секунд) и памяти (1 МБ)
+                # Настройка ограничений ресурсов
+                def limit_resources():
+                    import resource
+                    # Ограничение CPU времени (5 секунд)
+                    resource.setrlimit(resource.RLIMIT_CPU, (5, 5))
+                    # Ограничение памяти (512 КБ)
+                    resource.setrlimit(resource.RLIMIT_AS, (512 * 1024, 512 * 1024))
+                    # Ограничение количества файлов
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (0, 0))  # Запрещаем открытие файлов
+                    # Ограничение размера файлов
+                    resource.setrlimit(resource.RLIMIT_FSIZE, (0, 0))  # Запрещаем создание файлов
+                    # Ограничение количества процессов
+                    resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
+                    # Ограничение размера стека
+                    resource.setrlimit(resource.RLIMIT_STACK, (256 * 1024, 256 * 1024))  # 256 КБ
+                    # Ограничение количества открытых файловых дескрипторов
+                    resource.setrlimit(resource.RLIMIT_NOFILE, (0, 0))
+                    # Ограничение размера core-файла
+                    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+                
+                # Запускаем тест в изолированном процессе
                 process = subprocess.Popen(
                     ['python', test_file],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    text=True
+                    text=True,
+                    preexec_fn=limit_resources,
+                    cwd=temp_dir,  # Изолируем рабочую директорию
+                    env={
+                        'PYTHONPATH': temp_dir,  # Ограничиваем пути импорта
+                        'PYTHONDONTWRITEBYTECODE': '1',  # Запрещаем создание .pyc файлов
+                        'PYTHONNOUSERSITE': '1',  # Запрещаем использование пользовательских пакетов
+                        'PYTHONUNBUFFERED': '1',  # Отключаем буферизацию вывода
+                        'PYTHONIOENCODING': 'utf-8'  # Устанавливаем кодировку
+                    }
                 )
                 
                 try:
                     # Мониторинг использования памяти
-                    memory_limit = 1024 * 1024  # 1 МБ в байтах
+                    memory_limit = 512 * 1024  # 512 КБ в байтах
                     memory_exceeded = False
+                    start_time = time.time()
                     
                     while process.poll() is None:
                         try:
+                            # Проверяем время выполнения
+                            if time.time() - start_time > 5:  # 5 секунд таймаут
+                                process.kill()
+                                memory_exceeded = True
+                                break
+                                
+                            # Проверяем использование памяти
                             process_info = psutil.Process(process.pid)
                             memory_usage = process_info.memory_info().rss
                             
                             if memory_usage > memory_limit:
                                 memory_exceeded = True
-                                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                                process.kill()
                                 break
+                                
+                            time.sleep(0.1)  # Небольшая задержка для снижения нагрузки на CPU
+                            
                         except (psutil.NoSuchProcess, psutil.AccessDenied):
                             break
                     
@@ -2047,7 +2147,7 @@ def run_tests(code, task_id):
                             'function': test['function'],
                             'arguments': test['arguments'],
                             'expected': test['expected'],
-                            'error': 'Превышен лимит памяти (1 МБ)',
+                            'error': 'Превышен лимит памяти (512 КБ)',
                             'memory_exceeded': True
                         })
                         continue
