@@ -7,7 +7,7 @@ import os
 import signal
 import shutil
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 import string
 from functools import wraps
@@ -17,6 +17,8 @@ import tempfile
 import psutil
 import json
 import time
+import ast
+import re
 
 concurrent_path = os.path.dirname(__file__)
 os.chdir(concurrent_path)
@@ -141,17 +143,15 @@ login_manager.login_view = 'login'
 class ChatMessage(db.Model):
     __table_args__ = (
         db.Index('idx_chat_sender_receiver', 'sender_id', 'receiver_id'),
-        db.Index('idx_chat_created_at', 'created_at'),
-        db.Index('idx_chat_is_read', 'is_read'),
+        db.Index('idx_chat_receiver_sender', 'receiver_id', 'sender_id')
     )
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     message = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=db.func.now())
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=3))
     is_read = db.Column(db.Boolean, default=False)
-
-    # Связи с пользователями
+    
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
 
@@ -559,7 +559,8 @@ def send_chat_message():
     message = ChatMessage(
         sender_id=current_user.id,
         receiver_id=receiver.id,
-        message=message_text
+        message=message_text,
+        created_at=datetime.now() + timedelta(hours=3)  # Добавляем 3 часа для московского времени
     )
     
     db.session.add(message)
