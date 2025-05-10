@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary mb-3">← Назад</a>
+        <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary mb-3">← Назад</a>
     
     {% if is_student %}
         <h1 class="mb-4">Чат с учителем</h1>
@@ -25,7 +25,7 @@
                                     <br>
                                 {% endfor %}
                                 <div class="message-time">
-                                    <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
                                 </div>
                             </div>
                         </div>
@@ -42,14 +42,14 @@
         </div>
     {% else %}
         <div id="chat-container">
-            {% if student %}
-                <h1 class="mb-4">Чат со студентом {{ student.name }}</h1>
-                <div class="card">
-                    <div class="card-body">
-                        <div id="messages" class="messages mb-3" style="height: 400px; overflow-y: auto;">
-                            {% for message in messages %}
-                                <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
-                                    <div class="message-content">
+        {% if student %}
+            <h1 class="mb-4">Чат со студентом {{ student.name }}</h1>
+            <div class="card">
+                <div class="card-body">
+                    <div id="messages" class="messages mb-3" style="height: 400px; overflow-y: auto;">
+                        {% for message in messages %}
+                            <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                                <div class="message-content">
                                         {% set lines = message.message.split('\n') %}
                                         {% for line in lines %}
                                             {% if line.startswith('Посмотреть задачу: ') %}
@@ -61,42 +61,42 @@
                                             <br>
                                         {% endfor %}
                                         <div class="message-time">
-                                            <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
+                                    <small class="text-muted">{{ message.created_at.strftime('%H:%M') }}</small>
                                         </div>
-                                    </div>
                                 </div>
-                            {% endfor %}
-                        </div>
-                        <form id="message-form" class="mt-3">
-                            <input type="hidden" id="receiver_id" value="{{ student.id }}">
-                            <div class="input-group">
-                                <input type="text" id="message-input" class="form-control" placeholder="Введите сообщение...">
-                                <button type="submit" class="btn btn-primary">Отправить</button>
                             </div>
-                        </form>
+                        {% endfor %}
                     </div>
+                    <form id="message-form" class="mt-3">
+                        <input type="hidden" id="receiver_id" value="{{ student.id }}">
+                        <div class="input-group">
+                            <input type="text" id="message-input" class="form-control" placeholder="Введите сообщение...">
+                            <button type="submit" class="btn btn-primary">Отправить</button>
+                        </div>
+                    </form>
                 </div>
-            {% else %}
-                <h1 class="mb-4">Мои студенты</h1>
-                <div class="list-group">
-                    {% for student in students %}
+            </div>
+        {% else %}
+            <h1 class="mb-4">Мои студенты</h1>
+            <div class="list-group">
+                {% for student in students %}
                         <a href="#" class="list-group-item list-group-item-action student-chat-link" data-student-id="{{ student.id }}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="mb-1">{{ student.name }}</h5>
-                                    <p class="mb-1">{{ student.email }}</p>
-                                </div>
-                                {% if student.unread_count > 0 %}
-                                    <div class="d-flex align-items-center">
-                                        <span class="badge bg-danger rounded-pill me-2">{{ student.unread_count }}</span>
-                                        <i class="bi bi-envelope-fill text-danger"></i>
-                                    </div>
-                                {% endif %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">{{ student.name }}</h5>
+                                <p class="mb-1">{{ student.email }}</p>
                             </div>
-                        </a>
-                    {% endfor %}
-                </div>
-            {% endif %}
+                            {% if student.unread_count > 0 %}
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-danger rounded-pill me-2">{{ student.unread_count }}</span>
+                                    <i class="bi bi-envelope-fill text-danger"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
         </div>
     {% endif %}
 </div>

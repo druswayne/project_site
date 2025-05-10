@@ -1873,6 +1873,9 @@ def run_tests():
                 # Если входные данные - один аргумент
                 function_call = f"print({test.function}({repr(input_data)}))"
             
+            # Парсим ожидаемый результат из JSON
+            expected_output = json.loads(test.expected_output)
+            
             # Запускаем код с тестовыми данными
             process = subprocess.Popen(
                 ['python', '-c', f"{code}\n{function_call}"],
@@ -1881,52 +1884,60 @@ def run_tests():
                 text=True
             )
             
-            # Получаем результат
-            stdout, stderr = process.communicate(timeout=5)  # 5 секунд
-            
-            # Парсим ожидаемый результат из JSON
-            expected_output = json.loads(test.expected_output)
-            
-            # Парсим полученный результат
             try:
-                actual_output = json.loads(stdout.strip())
-            except json.JSONDecodeError:
-                actual_output = stdout.strip()
-            
-            # Сравниваем результаты
-            is_correct = actual_output == expected_output
-            error = stderr if stderr else None
-            
-            results.append({
-                'name': f'Тест {test.order_number}',
-                'passed': is_correct,
-                'function': test.function,
-                'arguments': input_data,
-                'expected': expected_output,
-                'actual': actual_output,
-                'error': error
-            })
-            
-        except subprocess.TimeoutExpired:
-            results.append({
-                'name': f'Тест {test.order_number}',
-                'passed': False,
-                'function': test.function,
-                'arguments': input_data,
-                'expected': expected_output,
-                'actual': None,
-                'error': 'Превышено время выполнения (5 секунд)'
-            })
+                # Получаем результат с таймаутом
+                stdout, stderr = process.communicate(timeout=5)  # 5 секунд
+                
+                # Парсим полученный результат
+                try:
+                    actual_output = json.loads(stdout.strip())
+                except json.JSONDecodeError:
+                    actual_output = stdout.strip()
+                
+                # Сравниваем результаты
+                is_correct = actual_output == expected_output
+                error = stderr if stderr else None
+                
+                results.append({
+                    'name': f'Тест {test.order_number}',
+                    'passed': is_correct,
+                    'function': test.function,
+                    'arguments': input_data,
+                    'expected': expected_output,
+                    'actual': actual_output,
+                    'error': error
+                })
+                
+            except subprocess.TimeoutExpired:
+                process.kill()
+                results.append({
+                    'name': f'Тест {test.order_number}',
+                    'passed': False,
+                    'function': test.function,
+                    'arguments': input_data,
+                    'expected': expected_output,
+                    'actual': None,
+                    'error': 'Превышено время выполнения (5 секунд)',
+                    'timeout': True
+                })
+                
         except Exception as e:
             results.append({
                 'name': f'Тест {test.order_number}',
                 'passed': False,
                 'function': test.function,
-                'arguments': input_data,
-                'expected': expected_output,
+                'arguments': input_data if 'input_data' in locals() else None,
+                'expected': expected_output if 'expected_output' in locals() else None,
                 'actual': None,
                 'error': str(e)
             })
+        finally:
+            # Удаляем временный файл
+            if 'temp_file_path' in locals():
+                try:
+                    os.remove(temp_file_path)
+                except:
+                    pass
     
     return jsonify({'tests': results})
 
