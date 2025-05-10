@@ -58,9 +58,9 @@
                 <div class="card-body p-0">
                     <div id="editor" style="height: 400px;">{{ user_code }}</div>
                 </div>
-                <div class="card-footer d-flex justify-content-start">
-                    <button id="run-tests" class="btn btn-primary px-4 py-2 me-2">Проверить решение</button>
-                    <button id="submit-solution" class="btn btn-primary px-4 py-2 me-2">Отправить решение</button>
+                <div class="card-footer d-flex flex-column flex-md-row justify-content-start">
+                    <button id="run-tests" class="btn btn-primary px-4 py-2 mb-2 mb-md-0 me-md-2">Проверить решение</button>
+                    <button id="submit-solution" class="btn btn-primary px-4 py-2 mb-2 mb-md-0 me-md-2">Отправить решение</button>
                     <a href="{{ url_for('view_practice_tasks', lesson_id=task.lesson_id) }}" class="btn btn-primary px-4 py-2">Назад</a>
                 </div>
             </div>

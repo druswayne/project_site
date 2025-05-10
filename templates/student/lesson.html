@@ -2,6 +2,25 @@
 
 {% block title %}{{ lesson.title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .action-button {
+        min-height: 80px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    @media (max-width: 767.98px) {
+        .action-button {
+            min-height: auto;
+            min-width: 200px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <h1 class="mb-4">{{ lesson.title }}</h1>
@@ -21,7 +40,7 @@
                         <div class="card-body">
                             <h5 class="card-title">Теория</h5>
                             <p class="card-text">Изучите теоретический материал урока</p>
-                            <a href="{{ url_for('view_lesson_theory', lesson_id=lesson.id) }}" class="btn btn-primary">
+                            <a href="{{ url_for('view_lesson_theory', lesson_id=lesson.id) }}" class="btn btn-primary action-button">
                                 Перейти к теории
                             </a>
                         </div>
@@ -36,16 +55,16 @@
                             <p class="card-text">Проверьте свои знания по теории</p>
                             {% if lesson.theory_test %}
                                 {% if progress and progress.theory_completed %}
-                                    <a href="{{ url_for('take_test', lesson_id=lesson.id) }}" class="btn btn-primary">
+                                    <a href="{{ url_for('take_test', lesson_id=lesson.id) }}" class="btn btn-primary action-button">
                                         Пройти тест
                                     </a>
                                 {% else %}
-                                    <button class="btn btn-secondary" disabled>
+                                    <button class="btn btn-secondary action-button" disabled>
                                         Сначала пройдите теорию
                                     </button>
                                 {% endif %}
                             {% else %}
-                                <button class="btn btn-secondary" disabled>
+                                <button class="btn btn-secondary action-button" disabled>
                                     Тест не доступен
                                 </button>
                             {% endif %}
@@ -60,9 +79,9 @@
                             <h5 class="card-title">Практика</h5>
                             <p class="card-text">Выполните практические задания</p>
                             {% if practice_available %}
-                                <a href="{{ url_for('view_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary">Практические задачи</a>
+                                <a href="{{ url_for('view_practice_tasks', lesson_id=lesson.id) }}" class="btn btn-primary action-button">Практические задачи</a>
                             {% else %}
-                                <button class="btn btn-secondary" disabled>
+                                <button class="btn btn-secondary action-button" disabled>
                                     Сначала пройдите тест
                                 </button>
                             {% endif %}
