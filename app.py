@@ -7,7 +7,7 @@ import os
 import signal
 import shutil
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 import string
 from functools import wraps
@@ -559,7 +559,8 @@ def send_chat_message():
     message = ChatMessage(
         sender_id=current_user.id,
         receiver_id=receiver.id,
-        message=message_text
+        message=message_text,
+        created_at=datetime.now() + timedelta(hours=3)  # Добавляем 3 часа для московского времени
     )
     
     db.session.add(message)
