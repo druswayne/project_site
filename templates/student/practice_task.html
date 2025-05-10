@@ -138,6 +138,16 @@
             // Отображаем результаты тестов
             const testResults = document.getElementById('test-results');
             testResults.innerHTML = '';
+            
+            if (!data.success) {
+                // Если есть ошибка безопасности
+                const errorElement = document.createElement('div');
+                errorElement.className = 'alert alert-danger';
+                errorElement.innerHTML = `<strong>Ошибка безопасности:</strong> ${data.error}`;
+                testResults.appendChild(errorElement);
+                return;
+            }
+            
             data.tests.forEach(test => {
                 const testElement = document.createElement('div');
                 testElement.className = `alert ${test.passed ? 'alert-success' : 'alert-danger'}`;
